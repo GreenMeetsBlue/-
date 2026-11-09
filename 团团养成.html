@@ -1,0 +1,2691 @@
+<!-- 
+=========================================
+《团团养成》更新日志
+=========================================
+[版本 v2.0.8] - 2026-11-04 全局资源条 + 账目透明版（硬核向 · 零数值改动）
+定位说明：本作是硬核养成，惩罚数值一律不降。本版只让玩家「看得见、算得清」。
+1. [BUG] 精力只在 updateLearnUI() 更新、render() 不碰 → 主界面/商店/打工全程盲区。新增主界面 ⚡ 精力条，抽 renderEnergy() 统一驱动主界面 / 学习界面 / 商店标题，三处同源。
+2. [BUG] 学习门槛写死 energy<20，但非文盲实际只扣 18 → 18~19 点被误拦。门槛、按钮文案、实际扣值统一由 getStudyEnergyCost() / getStudyHungerCost() 同源计算。
+3. [BUG] 学习按钮永远写「耗15饱腹/20精力」，与学历被动减免不符 → 改为动态显示实际消耗；精力不足时按钮直接禁用并写明「⚡当前/需」。
+4. [暗账] 玩耍 / 探索 / 休息的 payActionCost() 返回值一律被丢弃，扣了多少经验从不显示 → 日志如实写出「经验 -N」「并降级」；玩耍补写原本漏掉的「经验 +N」。
+5. [交互] 打工卡片只写「精力 -30」不看余额，点下去才 alert → 改为显示「当前 ⚡X / 需 Y」，不足的岗位按钮直接灰掉；doJob 的 alert 兜底也带数值。
+6. [过时文案] v2.0.6 后玩耍已不回精力，但学习不足的 alert 仍写「先玩耍或休息」→ 改为只提示休息。
+7. [显示] 所有消耗 / 回复精力的动作日志统一附「⚡剩余/100」；精力 ≤20 转橙、≤5 转红，心情文案加「有点犯困 / 累得趴下了」。
+8. 明确不变：49.5% 经验扣除触发率、扣值 5~15 / 硬模式 10~30、休息每次必扣、玩耍随机扣 1~20 精力（偶数 50% 落 1~10 / 奇数 10~20）、休息 +40 精力、Lv.1~3 保护期、堕落警告 -20、五组衰减定时器、250 专业 / 14 岗位 / 11 学历、亲密度闭环、存档结构与 hash 字段——一个数值都没动，旧档零迁移。
+=========================================
+[版本 v2.0.7] - 2026-11-04 经验扣除概率口径修正版
+1. 口径澄清：原版玩耍 / 探索的经验扣除为 Lv.4+ 每次必触发（100%），Lv.1~3 保护期完全不扣，并不存在 55% 的设定。
+2. 按「55% 下调 5.5 个百分点」的意图，把触发概率从 v2.0.6 的 5.5% 修正为 49.5%（ACTION_XP_COST_CHANCE = 0.495）。
+3. 触发时扣值（普通 5~15 / 硬模式 10~30）、Lv.1~3 保护期、休息每次必扣、玩耍精力随机扣 1~20、亲密度闭环等全部保持 v2.0.6 不变。
+=========================================
+[版本 v2.0.6] - 2026-11-04 经验 / 精力手感调整版
+1. 玩耍 / 探索的经验扣除改为 5.5% 概率触发（原 Lv.4+ 每次必扣，等价 100%）；触发时扣值、硬模式加成、Lv.1~3 保护期一律不变，休息维持原样。
+2. 玩耍不再 +20 精力，改为随机扣除 1~20 精力：偶数等级 50% 概率落在 1~10、其余落在 10~20；奇数等级固定落在 10~20；精力下限 0。
+3. 玩耍日志同步改写为实际扣除值，不再虚报「精力 +20」。
+4. 其余机制、数值、UI、亲密度闭环与 v2.0.5 完全一致。
+=========================================
+[版本 v2.0.5] - 2026-11-04 亲密度闭环版
+1. 修复：摸头 / 送礼涨亲密度后不检查成就，导致「亲密无间」「心有灵犀」可能永不解锁；成就检查统一收进 render()。
+2. 修复：送礼写死 +18 却在 85 点截断，账实不符；改为按剩余空间计算实际增量并如实显示。
+3. 修复：85 与 100 两套上限打架，送礼门槛统一到 100，弹窗文案同步。
+4. 修复：考砸扣 15 点亲密度无任何提示，补上日志与 alert「收据」。
+5. 摸头不再是无成本刷亲密：每次耗 2 精力，且每日最多通过摸头获得 15 点亲密度（与梦境碎片每日 3 个同款设计）。
+6. 【新增减项】在线活跃时，若 5 分钟没有任何互动，亲密度 -1（宽限 5 分钟）；回主菜单 / 学习界面 / 打开任意面板时与饱腹快乐一同暂停。
+7. 【新玩法】每日「💌 团团的心愿」：接下约定后 5 分钟内完成指定互动，亲密度 +8~15、快乐 +3、金币 +15；超时扣 4~8 点，每天一次机会。
+8. 新增成就「心意相通」「从不爽约」，档案室统计加入心愿完成 / 爽约次数；旧存档自动补齐新字段。
+=========================================
+[版本 v2.0.4] - 2026-11-04 三界面 + 学习系统整合版
+1. 签到入口与红点移到主界面，游戏界面移除 📅 悬浮按钮。
+2. 新增第三个界面「学习系统专属界面」：解锁后点 📖 直接进入，不再是弹窗；升学分流与选专业都在该界面内完成。
+3. 学习界面左上角新增灰色 ⬅ 返回按钮；回主菜单时统一清理所有浮层与计时器。
+4. 主界面 / 学习界面 / 任意浮层打开期间暂停饱腹与快乐衰减及死亡判定，避免「选着专业团团饿死了」；返回游戏界面后恢复。
+5. 专业扩充到 250 个，分 10 个领域（各 25 个），原 30 个专业全部保留并兼容旧存档，新增 field 字段。
+6. 选专业改为「搜索 + 领域标签 + 随机推荐 + 换一批 + 回车直选」，单屏最多 12 条，不再列长表下滑。
+7. 打工系统改为按专业领域匹配岗位，岗位扩到 14 个并各配工作内容文案；工资压缩到 15~400 且依旧随机；关掉打工后同步刷新商店金币。
+=========================================
+[版本 v2.0.3] - 2026-10-31 UI 整合版
+1. 打工与梦境入口从主界面悬浮按钮移入神秘商店，改为商店标题下方一排圆形小图标 + 小字标签。
+2. 从商店打开打工/梦境，弹窗覆盖在商店之上（z-index 150），关闭后自动回到商店。
+3. 主界面左侧 🎁 上移至 124px、右侧 📖 上移至 70px，填补删除按钮后的视觉空缺。
+4. 其余数值、数据表、逻辑与 v2.0.2 完全一致。
+=========================================
+[版本 v2.0.2] - 2026-10-29 完整修复版
+1. 修复 defaults 未定义导致的旧存档静默丢失。
+2. 修复喂食/探索成功失败统计不累加，导致相关成就永久锁死。
+3. 实装预言效果：濒死时自动救回并恢复饱腹/快乐到 60。
+4. 修复普高→大学/大专无法选择专业，导致高薪岗位不可见。
+5. 修复堕落警告永不触发，改为独立经验缓冲判定。
+6. localStorage 写入加 300ms 节流，连点不再掉帧。
+7. 摸头加 0.5 秒冷却，防止无限刷亲密度。
+8. 主菜单界面暂停饥饿/快乐衰减。
+9. 盲盒升级同步等级统计与形象。
+10. 若干文案与按钮 id 修正。
+=========================================
+[版本 v2.0.1] - 2026-10-31 最终修复版
+1. 修复了顶部标题遗留的 🧪 图标，界面更清爽。
+2. 修复了 UI 布局：右侧加入 📖 学习图标，左侧加入 🎁 送礼图标。
+3. 修复了 0.5秒 无感防连点机制：打开弹窗（商店、学习、打工）不再被静默吞掉，只有核心动作（喂食/玩耍/探索/休息/学习动作/打工动作）才受 0.5 秒限制。
+4. 实装了送礼机制：520 金币加 18 点亲密度，上限卡在 85 点。
+5. 实装学习图鉴阈值触发逻辑：只有学习次数或学识达标才会解锁特定图鉴。
+6. 实装考试 Debuff：考砸了触发 5 分钟考试阴影（快乐收益-20%）并扣除亲密度。
+=========================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>团团养成</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #e0f7fa, #fff3e0); text-align: center; padding: 20px; margin: 0; color: #37474f; }
+    .game { max-width: 520px; margin: 0 auto; background: white; padding: 24px; border-radius: 22px; box-shadow: 0 5px 20px #00000015; position: relative; }
+    #creature { font-size: 90px; margin: 15px auto; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, #ffffff 30%, #f0f4f8 100%); border-radius: 50%; box-shadow: 0 10px 20px #00000010; border: 4px solid white; transition: all 0.3s ease; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+    #creature.bounce { animation: petBounce 0.45s ease; }
+    @keyframes petBounce { 0% { transform: scale(1); } 30% { transform: scale(1.18) rotate(-6deg); } 60% { transform: scale(0.94) rotate(4deg); } 100% { transform: scale(1); } }
+    
+    .pet-name-card { background: linear-gradient(to right, #f5f7fa, #e4e8eb); border-radius: 30px; padding: 8px 16px; display: inline-block; min-width: 180px; box-shadow: inset 0 2px 5px #ffffff80, 0 4px 10px #00000008; margin-bottom: 15px; }
+    
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin-bottom: 20px; text-align: left; }
+    .stat-item { font-size: 13px; }
+    .bar { height: 14px; background: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 4px; box-shadow: inset 0 1px 3px #0000001a; }
+    .fill { height: 100%; width: 50%; transition: width 0.3s; }
+    #xpBar { background: linear-gradient(90deg, #64b5f6, #42a5f5); }
+    #hungerBar { background: linear-gradient(90deg, #ffb74d, #ff9800); }
+    #happyBar { background: linear-gradient(90deg, #f06292, #ec407a); }
+    #intimacyBar { background: linear-gradient(90deg, #f48fb1, #e91e63); }
+    #energyBar, #gameEnergyBar { background: linear-gradient(90deg, #81c784, #4caf50); }
+    #knowledgeBar { background: linear-gradient(90deg, #ba68c8, #8e24aa); }
+    
+    button { border: none; border-radius: 12px; padding: 12px 16px; margin: 5px; background: #80cbc4; color: #173b38; font-size: 16px; cursor: pointer; transition: all 0.2s; }
+    button:hover { filter: brightness(0.96); }
+    button:active { transform: scale(0.94); }
+    button:disabled { background: #cfd8dc; color: #90a4ae; cursor: not-allowed; }
+    #log { margin-top: 15px; padding: 12px; background: #f5f5f5; border-radius: 12px; min-height: 48px; line-height: 1.6; text-align: left; font-size: 14px; }
+    
+    .icon-btn { position: absolute; width: 44px; height: 44px; border-radius: 50%; padding: 0; font-size: 20px; box-shadow: 0 2px 5px #00000015; }
+    #homeBtn { top: 16px; left: 16px; background: #e3f2fd; }
+    #shopBtn { top: 70px; left: 16px; background: #ffd54f; }
+    #giftBtn { top: 124px; left: 16px; background: #f8bbd0; }
+    #wishBtn { top: 178px; left: 16px; background: #d1c4e9; }
+    
+    #panelBtn { top: 16px; right: 16px; background: #e3f2fd; }
+    #learnBtn { top: 70px; right: 16px; background: #c8e6c9; }
+    
+    /* 商店内的快捷入口 */
+    .shop-quick-entries { display: flex; justify-content: center; gap: 36px; margin: 12px 0 18px 0; }
+    .shop-quick-entry { display: flex; flex-direction: column; align-items: center; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .shop-quick-entry .quick-icon { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 2px 8px #00000020; transition: all 0.2s; }
+    .shop-quick-entry:hover .quick-icon { filter: brightness(0.95); transform: translateY(-2px); }
+    .shop-quick-entry:active .quick-icon { transform: scale(0.92); }
+    .shop-quick-entry .quick-label { font-size: 12px; color: #546e7a; margin-top: 5px; font-weight: bold; }
+    
+    #overlay, #shopOverlay, #giftOverlay, #lazyOverlay, #signInOverlay, #wishOverlay { position: fixed; inset: 0; background: #00000055; display: none; align-items: center; justify-content: center; padding: 16px; z-index: 100; }
+    /* 打工与梦境从商店进入，必须盖在商店之上 */
+    #workOverlay, #dreamOverlay { position: fixed; inset: 0; background: #00000055; display: none; align-items: center; justify-content: center; padding: 16px; z-index: 150; }
+    .show { display: flex !important; }
+    .modal-box { width: 100%; max-width: 400px; max-height: 85vh; overflow-y: auto; background: white; border-radius: 20px; padding: 20px; text-align: left; box-shadow: 0 10px 40px #00000030; position: relative; }
+    .modal-box h2 { margin-top: 0; text-align: center; }
+    
+    .search-box { width: 90%; padding: 10px; border: 1px solid #ccc; border-radius: 10px; font-size: 16px; margin-bottom: 15px; }
+    .major-list { max-height: 40vh; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .major-item { padding: 10px; background: #eceff1; border-radius: 10px; cursor: pointer; text-align: center; font-size: 14px; font-weight: bold; }
+    .major-item:hover { background: #cfd8dc; }
+    
+    .learn-section { background: #f1f8e9; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
+    .job-card { background: #f5f5f5; border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .job-card button { margin: 0; padding: 8px 12px; font-size: 14px; }
+    
+    .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+    .tabs button { flex: 1; margin: 0; padding: 8px 0; font-size: 14px; background: #eceff1; color: #455a64; }
+    .tabs button.active { background: #80cbc4; color: #173b38; font-weight: bold; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .ach { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px; border-radius: 12px; background: #f7f7f7; margin-bottom: 8px; }
+    .ach .info { flex: 1; }
+    .ach .name { font-weight: bold; font-size: 14px; }
+    .ach .cond { font-size: 12px; color: #78909c; }
+    .ach.done .name { color: #2e7d32; }
+    .ach.claimed { opacity: 0.6; }
+    .ach button { padding: 6px 10px; font-size: 12px; margin: 0; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .stats-grid div { background: #f7f7f7; border-radius: 10px; padding: 8px 10px; font-size: 13px; }
+    .dex-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .dex-item { background: #f7f7f7; border-radius: 12px; padding: 10px; display: flex; gap: 8px; align-items: center; }
+    .dex-item .emoji { font-size: 24px; }
+    .dex-item .dex-info { flex: 1; text-align: left; }
+    .dex-item .dex-name { font-weight: bold; font-size: 13px; }
+    .dex-item .dex-meta { font-size: 11px; color: #78909c; }
+    .dex-item.locked { opacity: 0.45; }
+    .dex-item.locked .emoji { filter: grayscale(1); }
+    .dex-item.legendary { background: linear-gradient(135deg, #fff8e1, #ffe082); border: 2px solid #ffb300; box-shadow: 0 0 15px #ffb30066; }
+    .dex-item.legendary .dex-name { color: #d84315; text-shadow: 0 0 5px #ffb300; }
+    
+    #achPopups, #dexPopups { position: fixed; left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 10px; align-items: center; width: 100%; pointer-events: none; }
+    #achPopups { top: 40px; }
+    #dexPopups { top: 110px; }
+    .ach-popup, .dex-popup { pointer-events: auto; border-radius: 12px; padding: 12px 20px; box-shadow: 0 8px 25px #00000020; text-align: left; min-width: 240px; max-width: 300px; cursor: pointer; animation: popInCenter 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .ach-popup { background: linear-gradient(135deg, #ffffff, #f1f8e9); border-left: 5px solid #66bb6a; }
+    .ach-popup .p-title { font-weight: bold; color: #2e7d32; font-size: 14px; margin-bottom: 4px; }
+    .ach-popup .p-name { font-size: 16px; color: #37474f; font-weight: bold; }
+    .ach-popup .p-hint { font-size: 12px; color: #90a4ae; margin-top: 4px; }
+    .dex-popup { background: linear-gradient(135deg, #ffffff, #e3f2fd); border-left: 5px solid #42a5f5; }
+    .dex-popup .p-title { font-weight: bold; color: #1976d2; font-size: 14px; margin-bottom: 4px; }
+    .dex-popup .p-name { font-size: 16px; color: #37474f; font-weight: bold; }
+    .ach-popup.fade-out, .dex-popup.fade-out { animation: fadeOut 0.5s ease forwards; }
+    @keyframes popInCenter { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @keyframes fadeOut { to { opacity: 0; transform: scale(0.9); } }
+    
+    #deathOverlay, #amuletOverlay { position: fixed; inset: 0; background: #000000d0; display: none; align-items: center; justify-content: center; z-index: 999; }
+    .death-box { background: white; padding: 40px 20px; border-radius: 20px; text-align: center; width: 80%; max-width: 350px; box-shadow: 0 10px 40px #00000080; animation: shake 0.5s; }
+    .death-box h2 { color: #d32f2f; font-size: 22px; margin-bottom: 20px; font-weight: bold; line-height: 1.4; }
+    .death-box button { background: #455a64; color: white; width: 45%; font-size: 16px; padding: 12px; border-radius: 12px; }
+    @keyframes shake {
+      0% { transform: translate(1px, 1px) rotate(0deg); }
+      10% { transform: translate(-1px, -2px) rotate(-1deg); }
+      20% { transform: translate(-3px, 0px) rotate(1deg); }
+      30% { transform: translate(3px, 2px) rotate(0deg); }
+      40% { transform: translate(1px, -1px) rotate(1deg); }
+      50% { transform: translate(-1px, 2px) rotate(-1deg); }
+      60% { transform: translate(-3px, 1px) rotate(0deg); }
+      70% { transform: translate(3px, 1px) rotate(-1deg); }
+      80% { transform: translate(-1px, -1px) rotate(1deg); }
+      90% { transform: translate(1px, 2px) rotate(0deg); }
+      100% { transform: translate(1px, -2px) rotate(-1deg); }
+    }
+
+    /* ===== 学习系统专属界面 ===== */
+    #learnScreen { min-height: 420px; }
+    #learnBackBtn { top: 16px; left: 16px; }
+    .learn-section { text-align: left; }
+    .back-btn { background: #b0bec5; color: #37474f; font-size: 18px; }
+    .back-btn:hover { background: #9eacb5; }
+    .learn-view { display: none; }
+    .learn-view.active { display: block; }
+    .field-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .field-chip { padding: 6px 11px; border-radius: 16px; background: #eceff1; color: #455a64; font-size: 12px; font-weight: bold; cursor: pointer; user-select: none; transition: all .2s; }
+    .field-chip:hover { background: #cfd8dc; }
+    .field-chip.active { background: #80cbc4; color: #173b38; }
+    .major-hint { font-size: 12px; color: #78909c; margin-bottom: 8px; min-height: 16px; line-height: 1.5; text-align: left; }
+    .major-card { padding: 9px 10px; background: #eceff1; border-radius: 10px; cursor: pointer; text-align: left; font-size: 13px; font-weight: bold; line-height: 1.35; }
+    .major-card:hover { background: #cfd8dc; }
+    .major-card .m-field { display: block; font-size: 10px; font-weight: normal; color: #78909c; margin-top: 3px; }
+    .major-empty { grid-column: span 2; padding: 18px; text-align: center; color: #90a4ae; font-size: 13px; background: #f7f7f7; border-radius: 10px; }
+
+    /* ===== v2.0.8 主界面全局精力条 ===== */
+    .energy-row { display: flex; align-items: center; gap: 10px; margin: -2px 0 16px; padding: 7px 12px; border-radius: 12px; background: #f1f8e9; text-align: left; transition: background .3s; }
+    .energy-row .e-label { font-size: 13px; font-weight: bold; color: #2e7d32; white-space: nowrap; }
+    .energy-row .bar { flex: 1; margin: 0; }
+    .energy-row .e-num { font-size: 12px; color: #546e7a; white-space: nowrap; min-width: 54px; text-align: right; }
+
+    /* ===== 亲密度玩法：心愿横幅 + 心愿卡 ===== */
+    #wishBanner { display: none; margin: 12px 0 0; padding: 9px 12px; border-radius: 12px; background: linear-gradient(90deg, #fce4ec, #f3e5f5); color: #6a1b9a; font-size: 13px; line-height: 1.55; text-align: left; cursor: pointer; user-select: none; }
+    #wishBanner:hover { filter: brightness(0.97); }
+    .wish-card { background: linear-gradient(135deg, #fff8e1, #fce4ec); border-radius: 16px; padding: 18px 14px; text-align: center; margin-bottom: 12px; }
+    .wish-card .w-emoji { font-size: 54px; line-height: 1.2; }
+    .wish-card .w-title { font-size: 18px; font-weight: bold; color: #ad1457; margin: 6px 0; }
+    .wish-card .w-desc { font-size: 13px; color: #6a1b9a; line-height: 1.7; }
+    .wish-meta { display: flex; justify-content: space-around; gap: 8px; font-size: 12px; color: #546e7a; margin: 12px 0; flex-wrap: wrap; }
+    .wish-meta b { color: #ad1457; }
+  </style>
+</head>
+<body>
+  <div id="mainMenu" class="game" style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 400px;">
+    <h1>团团养成</h1>
+    <div id="menuCreature" style="font-size: 150px; margin: 30px 0; text-shadow: 0 10px 20px #00000020;">🥚</div>
+    <button onclick="startGame()" style="width: 80%; max-width: 300px; font-size: 20px; padding: 16px; background: #4db6ac; color: white; font-weight: bold; border-radius: 20px;">开始游戏</button>
+    <button onclick="resetGameMenu()" style="width: 80%; max-width: 300px; margin-top: 10px; background: #b0bec5; border-radius: 20px;">重新开始</button>
+    <button onclick="openSignIn()" style="width: 80%; max-width: 300px; margin-top: 10px; background: #ffe082; border-radius: 20px; position: relative;">📅 每日签到<span id="menuSignInDot" style="display:block; position:absolute; top:-4px; right:-4px; background:red; width:14px; height:14px; border-radius:50%; border:2px solid white;"></span></button>
+    <p style="font-size:12px;color:#90a4ae;margin-top:14px;">签到、学习、养成互不打扰 ✨</p>
+  </div>
+
+  <div class="game" id="gameUI" style="display: none;">
+    <button id="homeBtn" class="icon-btn" onclick="goHome()">🏠</button>
+    <button id="shopBtn" class="icon-btn" onclick="openShop()">🏪</button>
+    <button id="giftBtn" class="icon-btn" onclick="openGift()">🎁</button>
+    <button id="wishBtn" class="icon-btn" onclick="openWish()">💌<span id="wishDot" style="display:block; position:absolute; top:-4px; right:-4px; background:red; width:14px; height:14px; border-radius:50%; border:2px solid white;"></span></button>
+    
+    <button id="panelBtn" class="icon-btn" onclick="openPanel()">📊</button>
+    <button id="learnBtn" class="icon-btn" onclick="openLearn()">📖</button>
+    
+    <h1 style="font-size: 24px; margin-bottom: 5px;">团团养成</h1>
+    <p id="mood" style="margin-top: 0; color: #78909c; font-size: 14px;">心情：期待冒险 ✨</p>
+    
+    <div id="creature" onclick="petTap()" title="摸摸团团">🥚</div>
+    
+    <div class="pet-name-card">
+      <h2 style="margin: 0; font-size: 20px;">团团 · Lv.<span id="level">1</span> · <span id="degreeText" style="color: #8e24aa; font-weight: bold;">文盲</span></h2>
+    </div>
+    
+    <div class="stat-grid">
+      <div class="stat-item">
+        <strong>⭐ 经验：<span id="xpText">0</span>/<span id="xpNeed">100</span></strong>
+        <div class="bar"><div id="xpBar" class="fill"></div></div>
+      </div>
+      <div class="stat-item">
+        <strong>🍖 饱腹度：<span id="hungerText">70</span>/100</strong>
+        <div class="bar"><div id="hungerBar" class="fill"></div></div>
+      </div>
+      <div class="stat-item">
+        <strong>💗 快乐值：<span id="happyText">70</span>/100</strong>
+        <div class="bar"><div id="happyBar" class="fill"></div></div>
+      </div>
+      <div class="stat-item">
+        <strong>💞 亲密度：<span id="intimacyText">0</span>/100</strong>
+        <div class="bar"><div id="intimacyBar" class="fill" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <div class="energy-row" id="gameEnergyRow">
+      <span class="e-label">⚡ 精力</span>
+      <div class="bar"><div id="gameEnergyBar" class="fill" style="width:100%"></div></div>
+      <span class="e-num" id="gameEnergyText">100/100</span>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 5px; padding: 0 10px;">
+      <button onclick="feed()" style="padding: 10px 0; font-size: 14px;">🍎 喂食</button>
+      <button onclick="play()" style="padding: 10px 0; font-size: 14px;">🎾 玩耍</button>
+      <button onclick="explore()" style="padding: 10px 0; font-size: 14px;">🌿 探索</button>
+      <button onclick="rest()" style="padding: 10px 0; font-size: 14px;">🌙 休息</button>
+    </div>
+    
+    <div id="wishBanner" onclick="openWish()" title="点开查看团团的小心愿"></div>
+    
+    <div id="log">团团醒来了！快来和它玩吧！</div>
+  </div>
+
+  <!-- ===== 第三个界面：学习系统专属界面 ===== -->
+  <div class="game" id="learnScreen" style="display: none; padding-top: 66px;">
+    <button id="learnBackBtn" class="icon-btn back-btn" onclick="closeLearn()" title="返回游戏界面">⬅</button>
+
+    <h1 style="font-size: 24px; margin-bottom: 5px;">📖 学习系统</h1>
+    <p style="margin-top: 0; color: #78909c; font-size: 13px;">专属界面 · 念书、升学、选专业都在这里</p>
+
+    <div class="learn-section">
+      <p style="margin: 0 0 10px 0;"><strong>当前学历：</strong><span id="learnDegreeText">文盲</span></p>
+      <p style="margin: 0 0 5px 0;"><strong>学识进度：</strong><span id="knowledgeText">0</span> / <span id="knowledgeNeed">100</span></p>
+      <div class="bar" style="margin-bottom: 10px;"><div id="knowledgeBar" class="fill"></div></div>
+      <p style="margin: 0 0 5px 0;"><strong>精力状态：</strong><span id="energyText">100</span> / 100</p>
+      <div class="bar"><div id="energyBar" class="fill" style="width:100%"></div></div>
+      <p id="learnMajorInfo" style="margin: 10px 0 0 0; font-size: 13px; color: #546e7a;"></p>
+    </div>
+
+    <div id="examDebuffNotice" style="display:none; color:#d32f2f; font-size:13px; text-align:center; margin-bottom:10px; font-weight:bold;">
+      ⚠️ 处于考试阴影中：快乐收益降低 20%
+    </div>
+
+    <!-- 视图 A：日常学习 -->
+    <div id="learnMainView" class="learn-view active">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <button id="studyBtn" onclick="study()" style="background: #4caf50; color: white; font-size: 16px; padding: 12px;">📖 学习 (耗15饱腹/10快乐/20精力)</button>
+        <button onclick="buyTutoring()" style="background: #ff9800; color: white; font-size: 14px; padding: 10px;">💸 报终极押题班 (2000金币换50学识)</button>
+        <button onclick="tryPromote()" id="promoteBtn" style="background: #2196f3; color: white; font-size: 16px; padding: 12px; display: none;">🎓 参加升学考试/申请毕业</button>
+      </div>
+      <p style="font-size:12px;color:#90a4ae;text-align:center;margin-top:14px;line-height:1.6;">💡 学识达标后出现升学考试按钮；通过考试后在本界面完成分流与选专业。<br>在此界面停留时，饱腹与快乐不会衰减。</p>
+    </div>
+
+    <!-- 视图 B：升学分流 -->
+    <div id="learnStreamView" class="learn-view">
+      <h2 id="streamTitle" style="font-size:18px;text-align:center;">命运的岔路口</h2>
+      <div id="streamChoices" style="display:flex;flex-direction:column;gap:10px;margin:14px 0;"></div>
+      <button onclick="cancelMajor()" style="width:100%;background:#b0bec5;">稍后再选</button>
+    </div>
+
+    <!-- 视图 C：选专业（搜索 + 领域 + 随机推荐，绝不列长表） -->
+    <div id="learnMajorView" class="learn-view">
+      <h2 id="majorTitle" style="font-size:18px;text-align:center;margin:0 0 10px 0;">选择专业</h2>
+      <input type="text" id="majorSearch" class="search-box" placeholder="🔍 搜专业名或领域，如「医学」「设计」…" oninput="filterMajors()" onkeydown="majorSearchKey(event)" autocomplete="off">
+      <div id="majorFieldChips" class="field-chips"></div>
+      <div id="majorHint" class="major-hint"></div>
+      <div class="major-list" id="majorListContainer"></div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button onclick="shuffleMajors()" style="flex:1;background:#e1bee7;color:#4a148c;font-size:14px;">🎲 换一批</button>
+        <button id="majorCancelBtn" onclick="cancelMajor()" style="flex:1;background:#b0bec5;font-size:14px;">稍后再选</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="achPopups"></div>
+  <div id="dexPopups"></div>
+
+  <!-- 签到弹窗 -->
+  <div id="signInOverlay">
+    <div class="modal-box" style="text-align: center;">
+      <h2>📅 每日签到</h2>
+      <p style="font-size: 13px; color: #546e7a; text-align: center; margin-bottom: 15px;">断签会从第 1 天重新开始哦！</p>
+      
+      <div id="signInGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;">
+        <!-- 这里由 JS 动态生成 7 个格子 -->
+      </div>
+
+      <button id="claimSignInBtn" onclick="claimSignIn()" style="width: 100%; background: #4caf50; color: white; font-size: 18px; padding: 15px; border-radius: 12px; font-weight: bold;">领取奖励</button>
+      <button onclick="closeSignIn()" style="width: 100%; margin-top: 10px; background: #b0bec5;">关闭</button>
+    </div>
+  </div>
+  
+  <div id="workOverlay">
+    <div class="modal-box">
+      <h2>💼 人才市场</h2>
+      <p style="font-size: 13px; color: #546e7a; text-align: center;">你的学历和专业决定了你的身价。</p>
+      <div id="jobList" style="margin-top: 15px;"></div>
+      <button onclick="closeWork()" style="width: 100%; margin-top: 15px; background: #b0bec5;">返回商店</button>
+    </div>
+  </div>
+
+  <div id="wishOverlay">
+    <div class="modal-box" style="text-align: center;">
+      <h2>💌 团团的小心愿</h2>
+      <div id="wishBody"></div>
+      <p id="wishStats" style="font-size:12px;color:#90a4ae;margin:10px 0 0;"></p>
+      <p style="font-size:12px;color:#78909c;line-height:1.8;text-align:left;margin-top:14px;background:#f7f7f7;border-radius:10px;padding:10px 12px;">
+        📌 每天一个小心愿，接下后有 <b>5 分钟</b>完成时间；回主菜单、进学习界面或打开任意面板时，倒计时与生疏衰减一起暂停。<br>
+        ✅ 完成：亲密度 +8~15、快乐 +3、💰15。<br>
+        💔 超时：亲密度 -4~8，当天不再刷新，明天再来。<br>
+        💞 久不陪伴会慢慢变淡（在线每 5 分钟 -1）；喂食、玩耍、摸头、送礼、完成心愿都能把亲密度补回来。
+      </p>
+      <button onclick="closeWish()" style="width: 100%; margin-top: 12px; background: #b0bec5;">关闭</button>
+    </div>
+  </div>
+
+  <div id="giftOverlay">
+    <div class="modal-box" style="text-align: center;">
+      <h2>🎁 赠送礼物</h2>
+      <div style="font-size: 60px; margin: 20px 0;">🧸</div>
+      <p>花 <strong>520 金币</strong> 购买精美礼物<br>送给团团，增加 <strong>18 点亲密度</strong>。</p>
+      <p style="font-size: 12px; color: #d32f2f;">(亲密度上限 100 点，已满时送礼无效；未满时按剩余空间计算实际增量)</p>
+      <button onclick="buyGift()" style="background: #f06292; color: white; width: 100%; font-size: 18px; padding: 15px; border-radius: 12px;">购买并赠送</button>
+      <button onclick="closeGift()" style="width: 100%; margin-top: 10px; background: #b0bec5;">关闭</button>
+    </div>
+  </div>
+
+  <div id="dreamOverlay">
+    <div class="modal-box" style="text-align: center; background: linear-gradient(135deg, #f3e5f5, #e1bee7);">
+      <div style="position: absolute; top: 20px; left: 20px; font-weight: bold; color: #6a1b9a; font-size: 18px;">
+        ☁️ <span id="dreamShardsCount">0</span>
+      </div>
+      <div style="font-size: 120px; margin: 30px 0; text-shadow: 0 15px 25px #ab47bc66; animation: floatCrystal 3s infinite ease-in-out;">
+        🔮
+      </div>
+      <button id="dreamProphecyBtn" onclick="buyProphecy()" style="width: 100%; background: #ab47bc; color: white; font-weight: bold; font-size: 18px; padding: 15px; border-radius: 15px; box-shadow: 0 5px 15px #ab47bc55;">
+        🔮 消耗 X 个碎片预言
+      </button>
+      <button onclick="closeDream()" style="width: 100%; margin-top: 10px; background: #ce93d8; color: #4a148c; border-radius: 15px;">返回商店</button>
+    </div>
+  </div>
+  <style>
+    @keyframes floatCrystal { 0% { transform: translateY(0); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0); } }
+  </style>
+
+  <div id="overlay">
+    <div class="modal-box">
+      <h2>📊 档案室</h2>
+      <div class="tabs">
+        <button class="active" onclick="switchTab('ach', this)">🏆 成就</button>
+        <button onclick="switchTab('dex', this)">📖 图鉴</button>
+        <button onclick="switchTab('stats', this)">📈 统计</button>
+      </div>
+      <div id="tab-ach" class="tab-content active"><div id="achList"></div></div>
+      <div id="tab-dex" class="tab-content">
+        <div class="dex-grid" id="dexGrid"></div>
+        <p class="dex-meta" id="dexProgress" style="margin-top:10px;color:#78909c;font-size:13px;"></p>
+      </div>
+      <div id="tab-stats" class="tab-content"><div class="stats-grid" id="statsGrid"></div></div>
+      <button class="close-panel" onclick="closePanel()" style="width: 100%; margin-top: 15px; background: #b0bec5;">关闭</button>
+    </div>
+  </div>
+
+  <div id="shopOverlay">
+    <div class="modal-box">
+      <h2 style="text-align: center;">🏪 神秘商店 <span style="font-size: 16px; color: #ff8f00;">💰 <span id="shopGoldText">0</span></span> <span style="font-size: 14px; color: #2e7d32;">⚡ <span id="shopEnergyText">100</span>/100</span></h2>
+      
+      <!-- 快捷入口：打工 / 梦境 -->
+      <div class="shop-quick-entries">
+        <div class="shop-quick-entry" onclick="openWork()" title="进入人才市场">
+          <div class="quick-icon" style="background: #90a4ae; color: white;">💼</div>
+          <div class="quick-label">打工</div>
+        </div>
+        <div class="shop-quick-entry" onclick="openDream()" title="进入梦境">
+          <div class="quick-icon" style="background: #e1bee7;">🌙</div>
+          <div class="quick-label">梦境</div>
+        </div>
+      </div>
+      
+      <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 5px;">
+        <button onclick="buyItem('apple', 1000)" style="display: flex; justify-content: space-between; background: #f1f8e9; padding: 15px;">🍎 美味苹果 (饱腹+30) <span>💰1000</span></button>
+        <button onclick="buyItem('toy', 1000)" style="display: flex; justify-content: space-between; background: #fce4ec; padding: 15px;">🧸 解压玩具 (快乐+30) <span>💰1000</span></button>
+        <button onclick="buyItem('pill', 5000)" style="display: flex; justify-content: space-between; background: #e3f2fd; padding: 15px;">💊 经验胶囊 (经验+50) <span>💰5000</span></button>
+        <button onclick="buyItem('amulet', 10000)" style="display: flex; justify-content: space-between; background: #fff8e1; padding: 15px; border: 1px solid #ffca28;">🛡️ 免死金牌 (防死档) <span>💰10000</span></button>
+        <button onclick="buyItem('gacha', 2000)" style="display: flex; justify-content: space-between; background: linear-gradient(90deg, #e1bee7, #ce93d8); padding: 15px; color: #4a148c; font-weight: bold;">🎁 命运盲盒 (赌狗最爱) <span>💰2000</span></button>
+      </div>
+      <button onclick="closeShop()" style="width: 100%; margin-top: 15px; background: #b0bec5;">关闭商店</button>
+    </div>
+  </div>
+
+  <div id="deathOverlay">
+    <div class="death-box">
+      <h2 id="deathMsg">死了</h2>
+      <button onclick="confirmDeath()" style="width: 100%;">确定</button>
+    </div>
+  </div>
+
+  <div id="amuletOverlay">
+    <div class="death-box" style="animation: none;">
+      <h2 style="color: #f57c00; font-size: 22px;">🛡️ 触发免死金牌</h2>
+      <p style="color: #37474f; margin-bottom: 20px; font-size: 16px;">团团处于极度危险中！<br>是否消耗 1 块免死金牌救活它？</p>
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <button onclick="useAmulet()" style="background: #4caf50; color: white; width: 45%; font-size: 16px;">确定使用</button>
+        <button onclick="rejectAmulet()" style="background: #f44336; color: white; width: 45%; font-size: 16px;">放弃</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="lazyOverlay">
+    <div class="death-box" style="animation: none; border: 2px solid #ff9800;">
+      <h2 style="color: #f57c00; font-size: 22px;">🐷 堕落警告</h2>
+      <p style="color: #37474f; margin-bottom: 20px; font-size: 16px; font-weight: bold;">
+        团团不能再这么堕落了！<br>一直狂吃狂睡会变成猪的！<br><span style="font-size: 13px; font-weight: normal; color: #78909c;">（检测到频繁刷经验行为，经验 -20，反刷机制已拦截）</span>
+      </p>
+      <button onclick="closeLazyWarning()" style="background: #ff9800; color: white; width: 60%; font-size: 16px;">我知道了</button>
+    </div>
+  </div>
+
+<script>
+  const majorList = [
+    { name: "计算机科学", type: "science", field: "工学" },
+    { name: "软件工程", type: "science", field: "工学" },
+    { name: "土木工程", type: "science", field: "工学" },
+    { name: "机械工程", type: "science", field: "工学" },
+    { name: "电子工程", type: "science", field: "工学" },
+    { name: "建筑学", type: "science", field: "工学" },
+    { name: "自动化", type: "science", field: "工学" },
+    { name: "人工智能", type: "science", field: "工学" },
+    { name: "数据科学与大数据技术", type: "science", field: "工学" },
+    { name: "网络工程", type: "science", field: "工学" },
+    { name: "信息安全", type: "science", field: "工学" },
+    { name: "物联网工程", type: "science", field: "工学" },
+    { name: "通信工程", type: "science", field: "工学" },
+    { name: "电气工程及其自动化", type: "science", field: "工学" },
+    { name: "车辆工程", type: "science", field: "工学" },
+    { name: "航空航天工程", type: "science", field: "工学" },
+    { name: "材料科学与工程", type: "science", field: "工学" },
+    { name: "化学工程与工艺", type: "science", field: "工学" },
+    { name: "环境工程", type: "science", field: "工学" },
+    { name: "水利水电工程", type: "science", field: "工学" },
+    { name: "测绘工程", type: "science", field: "工学" },
+    { name: "交通运输", type: "science", field: "工学" },
+    { name: "船舶与海洋工程", type: "science", field: "工学" },
+    { name: "核工程与核技术", type: "science", field: "工学" },
+    { name: "生物医学工程", type: "science", field: "工学" },
+    { name: "数学", type: "science", field: "理学" },
+    { name: "物理学", type: "science", field: "理学" },
+    { name: "化学", type: "science", field: "理学" },
+    { name: "生物科学", type: "science", field: "理学" },
+    { name: "统计学", type: "science", field: "理学" },
+    { name: "天文学", type: "science", field: "理学" },
+    { name: "地理科学", type: "science", field: "理学" },
+    { name: "大气科学", type: "science", field: "理学" },
+    { name: "海洋科学", type: "science", field: "理学" },
+    { name: "地质学", type: "science", field: "理学" },
+    { name: "地球物理学", type: "science", field: "理学" },
+    { name: "信息与计算科学", type: "science", field: "理学" },
+    { name: "应用物理学", type: "science", field: "理学" },
+    { name: "应用化学", type: "science", field: "理学" },
+    { name: "生物技术", type: "science", field: "理学" },
+    { name: "生态学", type: "science", field: "理学" },
+    { name: "古生物学", type: "science", field: "理学" },
+    { name: "声学", type: "science", field: "理学" },
+    { name: "光学", type: "science", field: "理学" },
+    { name: "理论与应用力学", type: "science", field: "理学" },
+    { name: "系统科学", type: "science", field: "理学" },
+    { name: "科学史", type: "science", field: "理学" },
+    { name: "纳米材料与技术", type: "science", field: "理学" },
+    { name: "空间科学与技术", type: "science", field: "理学" },
+    { name: "人文地理与城乡规划", type: "science", field: "理学" },
+    { name: "临床医学", type: "science", field: "医学" },
+    { name: "药学", type: "science", field: "医学" },
+    { name: "口腔医学", type: "science", field: "医学" },
+    { name: "中医学", type: "science", field: "医学" },
+    { name: "护理学", type: "science", field: "医学" },
+    { name: "预防医学", type: "science", field: "医学" },
+    { name: "医学检验技术", type: "science", field: "医学" },
+    { name: "医学影像学", type: "science", field: "医学" },
+    { name: "麻醉学", type: "science", field: "医学" },
+    { name: "儿科学", type: "science", field: "医学" },
+    { name: "妇产科学", type: "science", field: "医学" },
+    { name: "精神医学", type: "science", field: "医学" },
+    { name: "眼视光医学", type: "science", field: "医学" },
+    { name: "康复治疗学", type: "science", field: "医学" },
+    { name: "针灸推拿学", type: "science", field: "医学" },
+    { name: "法医学", type: "science", field: "医学" },
+    { name: "基础医学", type: "science", field: "医学" },
+    { name: "生物制药", type: "science", field: "医学" },
+    { name: "公共卫生", type: "science", field: "医学" },
+    { name: "营养学", type: "science", field: "医学" },
+    { name: "助产学", type: "science", field: "医学" },
+    { name: "中药学", type: "science", field: "医学" },
+    { name: "蒙医学", type: "science", field: "医学" },
+    { name: "藏医学", type: "science", field: "医学" },
+    { name: "医学实验技术", type: "science", field: "医学" },
+    { name: "农学", type: "science", field: "农学" },
+    { name: "园艺", type: "science", field: "农学" },
+    { name: "植物保护", type: "science", field: "农学" },
+    { name: "动物科学", type: "science", field: "农学" },
+    { name: "动物医学", type: "science", field: "农学" },
+    { name: "林学", type: "science", field: "农学" },
+    { name: "水产养殖学", type: "science", field: "农学" },
+    { name: "草业科学", type: "science", field: "农学" },
+    { name: "农业资源与环境", type: "science", field: "农学" },
+    { name: "食品科学与工程", type: "science", field: "农学" },
+    { name: "风景园林", type: "science", field: "农学" },
+    { name: "农业机械化及其自动化", type: "science", field: "农学" },
+    { name: "茶学", type: "science", field: "农学" },
+    { name: "蚕学", type: "science", field: "农学" },
+    { name: "蜂学", type: "science", field: "农学" },
+    { name: "种子科学与工程", type: "science", field: "农学" },
+    { name: "设施农业科学与工程", type: "science", field: "农学" },
+    { name: "水土保持与荒漠化防治", type: "science", field: "农学" },
+    { name: "森林保护", type: "science", field: "农学" },
+    { name: "经济林", type: "science", field: "农学" },
+    { name: "园林", type: "science", field: "农学" },
+    { name: "智慧农业", type: "science", field: "农学" },
+    { name: "生物育种科学", type: "science", field: "农学" },
+    { name: "粮食工程", type: "science", field: "农学" },
+    { name: "农产品加工及贮藏", type: "science", field: "农学" },
+    { name: "汉语言文学", type: "arts", field: "文学" },
+    { name: "英语", type: "arts", field: "文学" },
+    { name: "新闻学", type: "arts", field: "文学" },
+    { name: "历史学", type: "arts", field: "文学" },
+    { name: "哲学", type: "arts", field: "文学" },
+    { name: "社会学", type: "arts", field: "文学" },
+    { name: "中国少数民族语言文学", type: "arts", field: "文学" },
+    { name: "古典文献学", type: "arts", field: "文学" },
+    { name: "应用语言学", type: "arts", field: "文学" },
+    { name: "秘书学", type: "arts", field: "文学" },
+    { name: "汉语国际教育", type: "arts", field: "文学" },
+    { name: "日语", type: "arts", field: "文学" },
+    { name: "法语", type: "arts", field: "文学" },
+    { name: "德语", type: "arts", field: "文学" },
+    { name: "俄语", type: "arts", field: "文学" },
+    { name: "西班牙语", type: "arts", field: "文学" },
+    { name: "阿拉伯语", type: "arts", field: "文学" },
+    { name: "朝鲜语", type: "arts", field: "文学" },
+    { name: "葡萄牙语", type: "arts", field: "文学" },
+    { name: "意大利语", type: "arts", field: "文学" },
+    { name: "翻译", type: "arts", field: "文学" },
+    { name: "商务英语", type: "arts", field: "文学" },
+    { name: "广告学", type: "arts", field: "文学" },
+    { name: "编辑出版学", type: "arts", field: "文学" },
+    { name: "网络与新媒体", type: "arts", field: "文学" },
+    { name: "法学", type: "arts", field: "法学" },
+    { name: "知识产权", type: "arts", field: "法学" },
+    { name: "政治学与行政学", type: "arts", field: "法学" },
+    { name: "国际政治", type: "arts", field: "法学" },
+    { name: "外交学", type: "arts", field: "法学" },
+    { name: "公安学", type: "arts", field: "法学" },
+    { name: "侦查学", type: "arts", field: "法学" },
+    { name: "治安学", type: "arts", field: "法学" },
+    { name: "边防管理", type: "arts", field: "法学" },
+    { name: "监狱学", type: "arts", field: "法学" },
+    { name: "禁毒学", type: "arts", field: "法学" },
+    { name: "经济犯罪侦查", type: "arts", field: "法学" },
+    { name: "涉外警务", type: "arts", field: "法学" },
+    { name: "马克思主义理论", type: "arts", field: "法学" },
+    { name: "思想政治教育", type: "arts", field: "法学" },
+    { name: "民族学", type: "arts", field: "法学" },
+    { name: "宗教学", type: "arts", field: "法学" },
+    { name: "人类学", type: "arts", field: "法学" },
+    { name: "社会工作", type: "arts", field: "法学" },
+    { name: "家政学", type: "arts", field: "法学" },
+    { name: "女性学", type: "arts", field: "法学" },
+    { name: "老年学", type: "arts", field: "法学" },
+    { name: "国际经贸规则", type: "arts", field: "法学" },
+    { name: "司法鉴定学", type: "arts", field: "法学" },
+    { name: "国家安全学", type: "arts", field: "法学" },
+    { name: "金融学", type: "business", field: "商学" },
+    { name: "会计学", type: "business", field: "商学" },
+    { name: "工商管理", type: "business", field: "商学" },
+    { name: "市场营销", type: "business", field: "商学" },
+    { name: "国际经济与贸易", type: "business", field: "商学" },
+    { name: "经济学", type: "business", field: "商学" },
+    { name: "财政学", type: "business", field: "商学" },
+    { name: "税收学", type: "business", field: "商学" },
+    { name: "保险学", type: "business", field: "商学" },
+    { name: "投资学", type: "business", field: "商学" },
+    { name: "金融科技", type: "business", field: "商学" },
+    { name: "经济统计学", type: "business", field: "商学" },
+    { name: "国民经济管理", type: "business", field: "商学" },
+    { name: "资源与环境经济学", type: "business", field: "商学" },
+    { name: "商务经济学", type: "business", field: "商学" },
+    { name: "能源经济", type: "business", field: "商学" },
+    { name: "劳动经济学", type: "business", field: "商学" },
+    { name: "贸易经济", type: "business", field: "商学" },
+    { name: "财务管理", type: "business", field: "商学" },
+    { name: "审计学", type: "business", field: "商学" },
+    { name: "资产评估", type: "business", field: "商学" },
+    { name: "电子商务", type: "business", field: "商学" },
+    { name: "国际商务", type: "business", field: "商学" },
+    { name: "物流管理", type: "business", field: "商学" },
+    { name: "供应链管理", type: "business", field: "商学" },
+    { name: "教育学", type: "arts", field: "教育学" },
+    { name: "心理学", type: "arts", field: "教育学" },
+    { name: "体育教育", type: "arts", field: "教育学" },
+    { name: "学前教育", type: "arts", field: "教育学" },
+    { name: "小学教育", type: "arts", field: "教育学" },
+    { name: "特殊教育", type: "arts", field: "教育学" },
+    { name: "教育技术学", type: "arts", field: "教育学" },
+    { name: "科学教育", type: "arts", field: "教育学" },
+    { name: "人文教育", type: "arts", field: "教育学" },
+    { name: "艺术教育", type: "arts", field: "教育学" },
+    { name: "华文教育", type: "arts", field: "教育学" },
+    { name: "教育康复学", type: "arts", field: "教育学" },
+    { name: "卫生教育", type: "arts", field: "教育学" },
+    { name: "认知科学与技术", type: "arts", field: "教育学" },
+    { name: "运动训练", type: "arts", field: "教育学" },
+    { name: "社会体育指导与管理", type: "arts", field: "教育学" },
+    { name: "运动人体科学", type: "arts", field: "教育学" },
+    { name: "休闲体育", type: "arts", field: "教育学" },
+    { name: "电子竞技运动与管理", type: "arts", field: "教育学" },
+    { name: "智能体育工程", type: "arts", field: "教育学" },
+    { name: "武术与民族传统体育", type: "arts", field: "教育学" },
+    { name: "体能训练", type: "arts", field: "教育学" },
+    { name: "冰雪运动", type: "arts", field: "教育学" },
+    { name: "应用心理学", type: "arts", field: "教育学" },
+    { name: "家庭教育", type: "arts", field: "教育学" },
+    { name: "美术学", type: "arts", field: "艺术学" },
+    { name: "音乐学", type: "arts", field: "艺术学" },
+    { name: "绘画", type: "arts", field: "艺术学" },
+    { name: "雕塑", type: "arts", field: "艺术学" },
+    { name: "摄影", type: "arts", field: "艺术学" },
+    { name: "中国画", type: "arts", field: "艺术学" },
+    { name: "书法学", type: "arts", field: "艺术学" },
+    { name: "艺术设计学", type: "arts", field: "艺术学" },
+    { name: "视觉传达设计", type: "arts", field: "艺术学" },
+    { name: "环境设计", type: "arts", field: "艺术学" },
+    { name: "产品设计", type: "arts", field: "艺术学" },
+    { name: "服装与服饰设计", type: "arts", field: "艺术学" },
+    { name: "数字媒体艺术", type: "arts", field: "艺术学" },
+    { name: "动画", type: "arts", field: "艺术学" },
+    { name: "戏剧影视文学", type: "arts", field: "艺术学" },
+    { name: "表演", type: "arts", field: "艺术学" },
+    { name: "导演", type: "arts", field: "艺术学" },
+    { name: "广播电视编导", type: "arts", field: "艺术学" },
+    { name: "播音与主持艺术", type: "arts", field: "艺术学" },
+    { name: "舞蹈学", type: "arts", field: "艺术学" },
+    { name: "作曲与作曲技术理论", type: "arts", field: "艺术学" },
+    { name: "音乐表演", type: "arts", field: "艺术学" },
+    { name: "戏剧影视美术设计", type: "arts", field: "艺术学" },
+    { name: "录音艺术", type: "arts", field: "艺术学" },
+    { name: "艺术史论", type: "arts", field: "艺术学" },
+    { name: "行政管理", type: "arts", field: "管理学" },
+    { name: "信息管理与信息系统", type: "business", field: "管理学" },
+    { name: "工程管理", type: "business", field: "管理学" },
+    { name: "工业工程", type: "business", field: "管理学" },
+    { name: "公共事业管理", type: "business", field: "管理学" },
+    { name: "劳动与社会保障", type: "business", field: "管理学" },
+    { name: "土地资源管理", type: "business", field: "管理学" },
+    { name: "城市管理", type: "business", field: "管理学" },
+    { name: "海关管理", type: "business", field: "管理学" },
+    { name: "交通管理", type: "business", field: "管理学" },
+    { name: "海事管理", type: "business", field: "管理学" },
+    { name: "档案学", type: "business", field: "管理学" },
+    { name: "图书馆学", type: "business", field: "管理学" },
+    { name: "会展经济与管理", type: "business", field: "管理学" },
+    { name: "旅游管理", type: "business", field: "管理学" },
+    { name: "酒店管理", type: "business", field: "管理学" },
+    { name: "物业管理", type: "business", field: "管理学" },
+    { name: "房地产开发与管理", type: "business", field: "管理学" },
+    { name: "工程造价", type: "business", field: "管理学" },
+    { name: "保密管理", type: "business", field: "管理学" },
+    { name: "大数据管理与应用", type: "business", field: "管理学" },
+    { name: "计算金融", type: "business", field: "管理学" },
+    { name: "应急管理", type: "business", field: "管理学" },
+    { name: "健康服务与管理", type: "business", field: "管理学" },
+    { name: "养老服务管理", type: "business", field: "管理学" }
+  ];
+
+  const workTexts = [
+    "🏗️ 团团去工地搬砖，累得满头大汗。", "⛏️ 团团在矿洞里挖矿，灰头土脸。", "🧱 团团去帮人砌墙，拿到了工钱。", "🪵 团团去森林里砍柴，背回一大捆木头。",
+    "🌾 团团蹲在田埂上，仔细记下今天的作物长势。", "🧪 团团守着实验台，把数据一行行抄进本子。", "💻 团团盯着屏幕敲代码，窗外天都黑了。", "📐 团团摊开图纸，用尺子量了又量。",
+    "🎨 团团改了七八版稿子，终于点了保存。", "📚 团团把知识点讲了一遍又一遍。", "🩺 团团挨家敲门，认认真真做记录。", "📊 团团拨着算盘，把账目核得清清楚楚。",
+    "⚖️ 团团翻完厚厚一摞卷宗，长长舒了口气。", "🎓 团团站在讲台上，粉笔用掉了半盒。"
+  ];
+  
+  const charityEvents = [
+    { text: "团团遇到一位流浪汉，慷慨解囊捐出了一些金币。", icon: "🥣" },
+    { text: "团团看到贫困山区的小动物们，伸出援手捐了一些金币。", icon: "🏔️" },
+    { text: "团团在路边遇到一只流浪小猫，买了高级罐头给它。", icon: "🐱" },
+    { text: "团团遇到野生保护动物协会的募捐箱，毫不犹豫地投了币。", icon: "🛡️" }
+  ];
+
+  const eventsDef = [
+    { id: "gem", emoji: "💎", name: "绝世稀有·起源宝石", weight: 0.0001, successText: "团团捧起起源宝石，它爆发出耀眼的光芒！", failText: "起源宝石散发出恐怖的能量，将团团弹开了……" },
+    { id: "mushroom", emoji: "🍄", name: "会跳舞的蘑菇", weight: 0.5, successText: "蘑菇拉着团团跳了一支舞！", failText: "蘑菇转晕了头，一头栽进泥里。" },
+    { id: "egg", emoji: "🥚", name: "神秘的蛋", weight: 0.5, successText: "蛋里传来轻轻的敲击声！", failText: "蛋晃了晃，滚下斜坡摔碎了……" },
+    { id: "butterfly", emoji: "🦋", name: "彩色蝴蝶", weight: 0.5, successText: "蝴蝶停在团团鼻尖上。", failText: "蝴蝶飞得太快，团团扑了个空。" },
+    { id: "star", emoji: "🌟", name: "隐藏的星星碎片", weight: 0.5, successText: "团团接住了坠落的星星碎片！", failText: "星星碎片一闪，消失在天边。" },
+    { id: "mud", emoji: "😆", name: "泥坑小泥球", weight: 0.5, successText: "团团在泥坑里打了个滚！", failText: "团团一脚踩空，栽进泥坑。" },
+    { id: "fish", emoji: "🐟", name: "会说话的小鱼", weight: 0.5, successText: "小鱼送了团团一片鳞！", failText: "小鱼吐了个泡泡，游走了。" },
+    { id: "feather", emoji: "🪶", name: "发光的羽毛", weight: 0.5, successText: "羽毛轻轻落在团团掌心。", failText: "一阵风吹来，羽毛飘走了。" },
+    { id: "clover", emoji: "🍀", name: "四叶草", weight: 0.05, successText: "团团找到了四叶草！", failText: "四叶草被风吹散。" },
+    { id: "crystal", emoji: "🔮", name: "神秘水晶", weight: 0.05, successText: "水晶映出团团的影子！", failText: "水晶裂开了一道缝。" },
+    { id: "turtle", emoji: "🐢", name: "慢吞吞的乌龟", weight: 0.5, successText: "乌龟驮着团团逛了一圈。", failText: "乌龟缩进壳里不出来。" },
+    { id: "rainbow", emoji: "🌈", name: "彩虹碎片", weight: 0.5, successText: "团团抓到了一小片彩虹！", failText: "彩虹碎片消失了。" },
+    { id: "hedgehog", emoji: "🦔", name: "打滚的小刺猬", weight: 0.5, successText: "小刺猬蹭了蹭团团。", failText: "团团被扎了一下。" },
+    { id: "honey", emoji: "🍯", name: "蜂蜜罐", weight: 0.5, successText: "团团发现一罐蜂蜜！", failText: "蜂蜜罐倒了，黏了团团一身。" },
+    { id: "stone", emoji: "🪨", name: "会眨眼的石头", weight: 0.5, successText: "石头给团团让开一条路。", failText: "石头一动不动。" },
+    { id: "balloon", emoji: "🎈", name: "漂浮的气球", weight: 0.5, successText: "气球带着团团飘了一小段！", failText: "气球啪地破了。" },
+    { id: "candle", emoji: "🕯️", name: "不会灭的蜡烛", weight: 0.5, successText: "蜡烛照亮了前路。", failText: "蜡烛被风吹灭。" },
+    { id: "compass", emoji: "🧭", name: "指向远方的小罗盘", weight: 0.5, successText: "罗盘指向神秘的方向。", failText: "罗盘疯狂打转。" },
+    { id: "fox", emoji: "🦊", name: "火红的小狐狸", weight: 1.838, successText: "小狐狸送了颗野果。", failText: "小狐狸跑了。" },
+    { id: "rabbit", emoji: "🐰", name: "跳跳兔", weight: 1.838, successText: "和跳跳兔一起蹦蹦跳跳。", failText: "跳跳兔钻进洞里。" },
+    { id: "squirrel", emoji: "🐿️", name: "藏松果的松鼠", weight: 1.838, successText: "松鼠分了颗松果！", failText: "松鼠把松果藏起来了。" },
+    { id: "frog", emoji: "🐸", name: "唱歌的青蛙", weight: 1.838, successText: "青蛙唱了一首歌。", failText: "青蛙跳进池塘。" },
+    { id: "deer", emoji: "🦌", name: "温柔的小鹿", weight: 1.838, successText: "小鹿蹭了蹭团团。", failText: "小鹿受惊跑进树林。" },
+    { id: "wolf", emoji: "🐺", name: "孤独的狼", weight: 1.838, successText: "狼看了团团一眼走了。", failText: "狼低吼一声，团团后退。" },
+    { id: "raccoon", emoji: "🦝", name: "翻垃圾桶的浣熊", weight: 1.838, successText: "浣熊送了枚硬币。", failText: "浣熊顺走了团团的东西。" },
+    { id: "hamster", emoji: "🐹", name: "塞满腮帮的仓鼠", weight: 1.838, successText: "仓鼠分了块饼干。", failText: "仓鼠全塞进腮帮。" },
+    { id: "owl", emoji: "🦉", name: "夜间猫头鹰", weight: 1.838, successText: "猫头鹰指了条近路。", failText: "猫头鹰一声不吭飞走了。" },
+    { id: "peacock", emoji: "🦚", name: "开屏的孔雀", weight: 1.838, successText: "孔雀开屏了。", failText: "孔雀转身走了。" },
+    { id: "swan", emoji: "🦢", name: "优雅的天鹅", weight: 1.838, successText: "天鹅载着团团滑行。", failText: "天鹅游远了。" },
+    { id: "penguin", emoji: "🐧", name: "摇摇摆摆的企鹅", weight: 1.838, successText: "和企鹅一起摇摆。", failText: "企鹅跳进水里溅了团团一身。" },
+    { id: "dolphin", emoji: "🐬", name: "跃出水面的海豚", weight: 1.838, successText: "海豚顶着团团转圈！", failText: "海豚游向深海。" },
+    { id: "whale", emoji: "🐋", name: "喷水的鲸鱼", weight: 1.838, successText: "鲸鱼喷出彩虹水柱！", failText: "鲸鱼潜下去了。" },
+    { id: "octopus", emoji: "🐙", name: "八爪章鱼", weight: 1.838, successText: "章鱼和团团击掌。", failText: "章鱼喷墨溜走了。" },
+    { id: "crab", emoji: "🦀", name: "横着走的螃蟹", weight: 1.838, successText: "螃蟹帮团团夹开贝壳。", failText: "螃蟹夹了团团一下。" },
+    { id: "snail", emoji: "🐌", name: "慢悠悠的蜗牛", weight: 1.838, successText: "和蜗牛聊了很久。", failText: "蜗牛爬得太慢，团团睡着了。" },
+    { id: "ladybug", emoji: "🐞", name: "七星瓢虫", weight: 1.838, successText: "瓢虫落在团团指尖。", failText: "瓢虫飞走了。" },
+    { id: "bee", emoji: "🐝", name: "采蜜的小蜜蜂", weight: 1.838, successText: "蜜蜂送了滴蜂蜜。", failText: "蜜蜂蜇了团团一下。" },
+    { id: "ant", emoji: "🐜", name: "搬家的蚂蚁", weight: 1.838, successText: "蚂蚁给团团让路。", failText: "蚂蚁爬到团团身上。" },
+    { id: "spider", emoji: "🕷️", name: "结网的蜘蛛", weight: 1.838, successText: "蜘蛛织了张漂亮的网。", failText: "团团撞进蜘蛛网。" },
+    { id: "dragonfly", emoji: "🦗", name: "停在小草上的蜻蜓", weight: 1.838, successText: "蜻蜓停在团团鼻尖。", failText: "蜻蜓飞走了。" },
+    { id: "flower", emoji: "🌸", name: "盛开的樱花", weight: 1.838, successText: "樱花瓣落在团团头上。", failText: "花瓣被吹散了。" },
+    { id: "tree", emoji: "🌳", name: "古老的大树", weight: 1.838, successText: "大树落下几颗果子。", failText: "大树纹丝不动。" },
+    { id: "maple", emoji: "🍁", name: "火红的枫叶", weight: 1.838, successText: "团团捡到一片红枫叶！", failText: "枫叶被风吹进河里。" },
+    { id: "wave", emoji: "🌊", name: "拍岸的浪花", weight: 1.838, successText: "浪花拍在团团脚边。", failText: "大浪打来，团团被淋湿。" },
+    { id: "mountain", emoji: "⛰️", name: "云雾缭绕的山", weight: 1.838, successText: "团团看到了云海。", failText: "山路太陡滑了下来。" },
+    { id: "moon", emoji: "🌙", name: "弯弯的月亮", weight: 1.838, successText: "月光洒在团团身上。", failText: "乌云遮住了月亮。" },
+    { id: "sun", emoji: "☀️", name: "温暖的太阳", weight: 1.838, successText: "团团舒服得眯起眼。", failText: "太阳太晒头晕眼花。" },
+    { id: "cloud", emoji: "☁️", name: "棉花糖一样的云", weight: 1.838, successText: "团团看云朵变来变去。", failText: "下起了小雨。" },
+    { id: "snow", emoji: "❄️", name: "飘落的雪花", weight: 1.838, successText: "团团接住一片雪花。", failText: "雪越下越大冻得哆嗦。" },
+    { id: "wind", emoji: "🍃", name: "打着旋的落叶", weight: 1.838, successText: "落叶围着团团跳舞。", failText: "风太大，团团东倒西歪。" },
+    { id: "firefly", emoji: "✨", name: "一闪一闪的萤火虫", weight: 1.838, successText: "萤火虫围着团团转。", failText: "萤火虫飞进夜色。" },
+    { id: "key", emoji: "🗝️", name: "生锈的旧钥匙", weight: 1.838, successText: "团团捡起旧钥匙。", failText: "钥匙断成了两截。" },
+    { id: "scroll", emoji: "📜", name: "破旧的羊皮卷", weight: 1.838, successText: "羊皮卷上画着地图！", failText: "字迹全糊了。" },
+    { id: "wand", emoji: "🪄", name: "会发光的小魔杖", weight: 1.838, successText: "魔杖变出小花！", failText: "魔杖冒出黑烟。" },
+    { id: "mask", emoji: "🎭", name: "神秘的面具", weight: 1.838, successText: "团团戴上面具跳舞。", failText: "面具摘不下来。" },
+    { id: "mirror", emoji: "🪞", name: "会说话的镜子", weight: 1.838, successText: "镜子夸团团可爱！", failText: "镜子说团团憔悴。" },
+    { id: "lantern", emoji: "🏮", name: "挂着的红灯笼", weight: 1.838, successText: "灯笼映红了团团的脸。", failText: "灯笼滚进沟里。" },
+    { id: "bell", emoji: "🔔", name: "叮当作响的铃铛", weight: 1.838, successText: "团团摇响铃铛。", failText: "铃铛掉在地上。" },
+    { id: "cup", emoji: "🍵", name: "冒着热气的茶", weight: 1.838, successText: "团团喝了口热茶。", failText: "茶太烫直哈气。" },
+    { id: "cake", emoji: "🍰", name: "掉在路边的蛋糕", weight: 1.838, successText: "团团吃了口蛋糕。", failText: "蛋糕坏了。" },
+    { id: "apple", emoji: "🍎", name: "红彤彤的苹果", weight: 1.838, successText: "团团摘了个苹果！", failText: "苹果太高够不到。" },
+    { id: "banana", emoji: "🍌", name: "弯弯的香蕉", weight: 1.838, successText: "团团剥开香蕉。", failText: "踩到香蕉皮摔倒。" },
+    { id: "clown", emoji: "🤡", name: "路过的小丑", weight: 1.838, successText: "小丑变了魔术！", failText: "恶作剧吓了团团一跳。" },
+    { id: "circus", emoji: "🎪", name: "热闹的马戏团", weight: 1.838, successText: "看了场精彩表演！", failText: "人太多被挤晕。" },
+    { id: "slipper", emoji: "🩴", name: "被丢下的拖鞋", weight: 1.838, successText: "拖鞋还给了主人。", failText: "穿错鞋一瘸一拐。" },
+    { id: "umbrella", emoji: "☂️", name: "路边的旧伞", weight: 1.838, successText: "撑开伞挡住雨。", failText: "伞骨断了淋成落汤鸡。" },
+    { id: "book", emoji: "📖", name: "掉在地上的书", weight: 1.838, successText: "读到了有趣的故事。", failText: "书页被风吹乱。" },
+    { id: "guitar", emoji: "🎸", name: "靠在树边的吉他", weight: 1.838, successText: "弹出了旋律。", failText: "琴弦断了。" },
+    { id: "paint", emoji: "🎨", name: "打翻的颜料", weight: 1.838, successText: "画了一幅自画像！", failText: "颜料溅了一身。" }
+  ];
+
+  const studyDexDef = [
+    { id: "s_5", emoji: "😴", name: "上课钓鱼", weight: 0, successText: "团团打瞌睡被老师粉笔头砸中了。", failText: "" },
+    { id: "s_20", emoji: "✍️", name: "学霸笔记", weight: 0, successText: "团团的笔记记得密密麻麻，全是重点！", failText: "" },
+    { id: "s_50", emoji: "☕", name: "靠咖啡续命", weight: 0, successText: "团团喝下第 10 杯黑咖啡，眼睛冒出了绿光。", failText: "" },
+    { id: "s_100", emoji: "📚", name: "学富五车", weight: 0, successText: "桌子上的书已经堆得比团团还高了。", failText: "" },
+    { id: "s_200", emoji: "🧠", name: "脑力透支", weight: 0, successText: "团团的大脑 CPU 已经烧到了 100度。", failText: "" },
+    { id: "s_k100", emoji: "🔤", name: "疯狂背单词", weight: 0, successText: "abandon, abandon... 团团背得滚瓜烂熟。", failText: "" },
+    { id: "s_k500", emoji: "📐", name: "解开微积分", weight: 0, successText: "团团解开了一道复杂的微积分，成就感爆棚！", failText: "" },
+    { id: "s_k1000", emoji: "🧪", name: "危险的化学实验", weight: 0, successText: "试管里冒出了神奇的彩色泡泡！", failText: "" },
+    { id: "s_k2000", emoji: "🔭", name: "仰望星空", weight: 0, successText: "团团开始思考宇宙的终极奥秘。", failText: "" },
+    { id: "s_k5000", emoji: "💡", name: "牛顿的苹果", weight: 0, successText: "一颗苹果砸在团团头上，它悟出了万有引力！", failText: "" },
+    { id: "s_fail", emoji: "💔", name: "考试阴影", weight: 0, successText: "考砸了，团团躲在被子里哭了整整一晚。", failText: "" },
+    { id: "s_zx", emoji: "🏫", name: "中考分流", weight: 0, successText: "站在人生的第一个岔路口，团团有些迷茫。", failText: "" },
+    { id: "s_gk", emoji: "🎓", name: "金榜题名", weight: 0, successText: "收到大学录取通知书的那一刻，团团激动得跳了起来！", failText: "" },
+    { id: "s_ky", emoji: "🔬", name: "秃头科研", weight: 0, successText: "为了写论文，团团掉了好几根头发。", failText: "" },
+    { id: "s_bs", emoji: "👑", name: "人类极限", weight: 0, successText: "戴上博士帽的那一刻，团团站在了学历的顶点。", failText: "" },
+    { id: "s_eat", emoji: "🍎", name: "偷吃零食", weight: 0, successText: "趁着老师回头，团团赶紧往嘴里塞了一块饼干。", failText: "" },
+    { id: "s_bird", emoji: "🪟", name: "窗外的小鸟", weight: 0, successText: "一只小鸟停在窗台上，陪团团看了一会儿书。", failText: "" },
+    { id: "s_ant", emoji: "🐜", name: "观察蚂蚁", weight: 0, successText: "团团盯着蚂蚁搬家看了半小时，书是一页没翻。", failText: "" },
+    { id: "s_phone", emoji: "📱", name: "手机被没收", weight: 0, successText: "偷偷玩手机被教导主任抓个正着！", failText: "" },
+    { id: "s_sleep", emoji: "🥱", name: "伸个懒腰", weight: 0, successText: "学累了，团团伸了个大大的懒腰。", failText: "" }
+  ];
+  const ambientTexts = [
+    "路边的小草轻轻摇晃，像在跟团团打招呼。","远处传来几声鸟叫，清脆又悠远。","阳光透过树叶，在地上洒下斑驳的光影。","一只蜻蜓从团团头顶飞过，转了个圈。","风吹过草丛，发出沙沙的响声。","团团踩到一滩水，溅起小小的水花。","泥土的清香飘过来，团团吸了吸鼻子。","一根羽毛慢悠悠地从天上飘下来。","团团坐在石头上，看了看远方的云。","小溪哗啦啦地流着，声音很好听。","有只小虫从团团脚边匆匆爬过。","树叶上挂着一颗露珠，闪闪发亮。","团团打了个喷嚏，把自己吓了一跳。","远处有座小木桥，看上去很旧了。","团团在树下发现了一个小小的鸟窝。","一只蝴蝶在花丛里飞来飞去。","团团对着水洼照了照自己的影子。","风吹乱了团团的毛，它甩了甩头。","路边的野花开了，颜色很鲜艳。","团团听到远处传来叮叮当当的声音。","一只蚂蚁搬着面包屑从团团面前经过。","团团躺在草地上，看天上的云慢慢飘。","有片叶子落在团团头上，它没发现。","团团追着自己的尾巴转了两圈。","远处的山看起来朦朦胧胧的。","团团捡起一根小树枝，随手扔了出去。","一只麻雀在地上蹦蹦跳跳地找食吃。","团团蹲下来，看一只蜗牛慢慢爬。","草丛里传来窸窸窣窣的声音。","团团在泥地上踩出了一串脚印。","天边的晚霞红彤彤的，很好看。","团团靠着一棵树，歇了一小会儿。","有只青蛙呱呱叫了两声。","团团闻到了一股淡淡的花香。","风把团团的耳朵吹得竖了起来。","地上有块奇怪的石头，团团踢了踢。","团团看到一只蜘蛛在结网。","远处传来孩子们的嬉笑声。","团团抬头，看到一只鹰在天上盘旋。","草地上有几颗亮晶晶的露珠。","团团绕着一棵大树走了三圈。","有片云飘过来，把太阳遮住了一会儿。","团团蹲在溪边，看着水流发呆。","一只蜜蜂嗡嗡地从耳边飞过。","团团用爪子刨了刨松软的泥土。","路边有个小水坑，倒映着天空。","团团闻到一股雨后的清新味道。","远处有只狗在汪汪叫。","团团看到一根绳子，叼起来甩了甩。","风停了，四周安静了下来。","团团在草垛上打了个滚。","有只瓢虫落在了团团的背上。","团团看着一只蚂蚁搬叶子，看了好久。","阳光暖暖的，团团眯起了眼睛。","草丛里有只蚂蚱，嗖地跳走了。","团团看到一只鸟在枝头梳理羽毛。","路边有一丛开得正旺的蒲公英。","团团吹了一口气，蒲公英飞散了。","远处有个稻草人，孤零零地立着。","团团绕过一个水坑，小心翼翼地走。","一只猫从墙头跳过，动作很轻盈。","团团在树荫下乘了会儿凉。","有颗小石子滚到团团脚边，它拨了拨。","天空很蓝，一朵云也没有。","团团看到一只小老鼠钻进了洞里。","风把树叶吹得哗哗响。","团团在墙边发现了一小片青苔。","远处有一片金黄的麦田。","团团用鼻子嗅了嗅地面。","一只蝴蝶停在一朵花上，一动不动。","团团打了个哈欠，有点困了。","路边的篱笆上爬满了牵牛花。","团团看到一只松鼠抱着松果跑过。","阳光照在水面上，波光粼粼。","团团在树下坐了一会儿，什么也没做。","有只蝉在树上不停地叫着。","团团踢开一颗小石子，看它滚远。","风里带着青草的味道。","团团看到一只青蛙蹲在荷叶上。","远处传来一阵悠扬的笛声。","团团在沙地上画了个歪歪扭扭的圈。","一只蝴蝶围着团团转了两圈。","团团仰头看了看，天上有一只风筝。","路边的野果红红的，团团没敢摘。","团团在草丛里找到了一根漂亮的羽毛。","有只鸟从头顶扑棱棱飞走了。","团团靠着石头，听风声发呆。","地上有一串奇怪的脚印。","团团看到一只螳螂举着前腿。","远处的炊烟袅袅升起。","团团抖了抖身上的草屑。","有颗水珠从叶尖滴下来，砸在团团鼻子上。","团团在田埂上慢慢走着。","一只蜗牛爬过，留下一条亮亮的痕迹。","团团看到一窝小鸟在巢里张着嘴。","风吹过麦田，掀起层层波浪。","团团在树根旁发现了一个小洞。","有只蝴蝶落在团团头顶，停了停又飞走。","团团把一块石头翻过来，下面有只小虫。","远处的狗尾巴草在风里摇。","团团舔了舔爪子，又继续走。","一只蜜蜂在花丛里忙个不停。","团团坐在坡上，看了会儿日落。","路边的树叶已经泛黄了。","团团看到一只兔子嗖地窜进草丛。","有片枯叶被风吹得打着旋。","团团用爪子拨了拨水，水花四溅。","远处有个小木屋，烟囱冒着烟。","团团在草地上找到一颗亮晶晶的珠子。","一只燕子从眼前飞快地掠过。","团团看到一只猫在墙角晒太阳。","风把团团的毛吹得乱七八糟。","路边有条小溪，水很清澈。","团团蹲下来，看水里的鱼游来游去。","有只蚂蚁爬上了团团的爪子。","团团在树下捡到一颗硬硬的果核。","天空飘起了细小的雨丝。","团团在屋檐下躲了一会儿雨。","远处传来一阵饭菜的香味。","团团看到一只知了趴在树干上。","风一吹，树上落下几片叶子。","团团在路边发现一个旧木箱。","有只小狗跑过来，闻了闻团团。","团团在草地上滚了一圈，沾了满身草。","一只蝴蝶停在团团鼻尖上，又飞走了。","团团看着天边的云，发了一会儿呆。","路边的小水沟里有几只蝌蚪。","团团听到远处有人在唱歌。","有只鸟在枝头跳来跳去。","团团在石头缝里发现一株小草。","风停了一会儿，又轻轻吹起来。","团团在墙角闻了闻，什么也没发现。","一只蜻蜓在水面上点了点。","团团看到一只蜘蛛从网上垂下来。","远处的钟声敲了两下。","团团在草堆里找了个舒服的姿势趴下。","有只松鼠从树上探出头来看了看。","团团在泥地里踩出一朵花的样子。","一只蝴蝶跟着团团飞了一小段。","团团捡起一块圆润的鹅卵石。","路边有几株含羞草，一碰就合上了。","团团看到一只刺猬缩成了一团。","风里夹着一点点凉意。","团团在树洞里发现了几颗松子。","有只鸟叼着虫子飞回了巢里。","团团趴在草地上，看着蚂蚁搬家。","远处传来一阵马蹄声。","团团在路边发现一朵蓝色的小花。","一只蜜蜂绕着团团转了一圈。","团团在小溪边洗了洗爪子。","天空中有几朵云慢慢地移动。","团团看到一只青蛙跳进了水里。","路边有棵树上结满了小果子。","团团在树下打了个滚，沾了一身落叶。","有只蝉突然不叫了，四周安静下来。","团团看着水里的倒影，歪了歪头。","一只蝴蝶在花上停了很久。","团团在草丛里发现一只绿色的蚂蚱。","远处的山被云雾遮住了一半。","团团用爪子刨了刨地上的落叶。","有颗松果从树上掉下来，差点砸到团团。","团团在路边看到一辆破旧的推车。","风把一团蒲公英吹到了团团面前。","团团蹲在田埂上，看农民伯伯干活。","一只小羊从远处跑过来，咩咩叫。","团团看到一只蜗牛爬上了叶子。","路边的篱笆上挂着几颗露珠。","团团在树下发现了一个蚂蚁窝。","有只蝴蝶在团团身边绕了好几圈。","团团看到一只鸟在啄地上的面包屑。","阳光从云缝里透出来，照在草地上。","团团在草丛里找到一根漂亮的蓝羽毛。","一只蜜蜂嗡嗡地飞过去，又飞回来。","团团在溪边看到一条小鱼跃出水面。","路边的野花被风吹得摇摇晃晃。","团团趴在地上，听了听地下的声音。","有只蜻蜓停在团团的尾巴上。","团团看到一只螃蟹横着爬过沙滩。","远处的天空被夕阳染成了橘红色。","团团在沙地上踩出一串歪歪扭扭的脚印。","一只海鸥从头顶飞过，叫了一声。","团团在石头下面发现几只小螃蟹。","风把海浪推上来，又退回去。","团团在沙滩上捡到一个漂亮的贝壳。","有只寄居蟹背着壳慢慢爬。","团团看到一只海星趴在浅水里。","远处的灯塔一闪一闪地亮着。","团团在树下发现一个鸟蛋壳。","一只蝴蝶落在团团耳朵上，轻轻扇翅。","团团在草丛里闻到一股甜甜的味道。","有只兔子从洞里探出头来看了看。","团团看到一只老鹰在天上盘旋。","路边的麦穗沉甸甸地低着头。","团团在田里看到一只稻草人。","一只青蛙扑通一声跳进水里。","团团在河边看到几只鸭子在游。","有只猫趴在墙头，懒洋洋地看着团团。","团团在树下捡到一片形状奇怪的叶子。","风把一团云吹成了小动物的形状。","团团看到一只啄木鸟在敲树干。","路边有座小石桥，桥下流水潺潺。","团团在桥上站了一会儿，看了看远方。","有只麻雀在团团的脚边蹦来蹦去。","团团在草丛里发现一朵蘑菇。","一只蜜蜂在蘑菇旁边转了一圈飞走了。","团团看到一只萤火虫在傍晚亮起来。","天空慢慢暗下来，星星开始出现。","团团在草地上躺下，看星星。","有颗流星划过，团团赶紧许了个愿。","月亮又圆又亮，照得地上像铺了层银。","团团在月光下慢慢走着，影子拉得很长。","一只猫头鹰在树上咕咕叫。","团团看到一只刺猬在夜里找食吃。","草丛里传来虫子的叫声，此起彼伏。","团团在夜里看到一只萤火虫停在草叶上。","远处的村庄亮着几点灯光。","团团在夜里听到远处传来狗叫声。","风把云吹散了，月亮露了出来。","团团看到一只蝙蝠从头顶飞过。","路边的树在月光下投下长长的影子。","团团在夜里闻到一股淡淡的花香。","有只夜莺在树上唱歌，声音很好听。","团团在夜里看到一只兔子飞快地跑过。","天空中的星星一闪一闪的。","团团在溪边看到月亮的倒影。","一只青蛙在池塘里呱呱叫了两声。","团团在夜风里抖了抖毛。","远处传来一阵悠扬的口琴声。","团团在夜里看到一只猫在屋顶上走。","路边的草丛里亮起一只萤火虫。","团团在月光下打了个滚。","一只飞蛾绕着路灯转来转去。","团团在夜里听到风吹过树叶的声音。","天空中有颗星星特别亮。","团团在夜里看到一只小狐狸从远处走过。","有只猫头鹰在树上睁着大眼睛。","团团在夜里闻到雨后泥土的味道。","远处的山在月光下显得很安静。","团团在夜里看到一片萤火虫飞过。","路边的水洼里映着星星。","团团在夜里听到一阵蛙鸣。","一只兔子从团团面前跑过，又停下来看它。","团团在草丛里找到一个亮晶晶的东西。","风把一片落叶吹到了团团脚边。","团团在路边看到一只受伤的小鸟。","有只松鼠在树上朝团团扔了颗松果。","团团在树下捡到一颗橡子。","一只蝴蝶在团团身边绕了一圈又一圈。","团团在草丛里看到一只绿色的螳螂。","路边的野花被太阳晒得有点蔫。","团团在溪边看到一条小鱼游来游去。","有只蜻蜓停在团团面前的草叶上。","团团在田埂上看到一只田鼠跑过。","远处的风车慢慢转着。","团团在草地上看到一只蚱蜢跳起来。","一只蜜蜂在团团耳边嗡嗡叫。","团团在树下看到一只蜗牛慢慢爬。","路边的树上有只鸟在唱歌。","团团在河边看到一只白鹭站着不动。","有只鸭子从水里钻出来，抖了抖翅膀。","团团在桥下看到几只小鱼游过。","远处的山在夕阳下变成金色。","团团在草地上看到一只蚂蚁扛着叶子。","一只蝴蝶落在团团的尾巴上。","团团在路边看到一朵特别大的花。","有只知了在树上叫个不停。","团团在树下看到一只蝉蜕。","路边的篱笆上有一只蜻蜓停着。","团团在草丛里发现一颗圆圆的小石头。","一只麻雀在地上啄来啄去。","团团在溪边看到自己的倒影。","风把一片花瓣吹到了团团头上。","团团在树下发现一个空鸟巢。","有只松鼠在树上看着团团。","团团在草地上看到一只蚂蚱。","路边的花丛里有一只蝴蝶在飞。","团团在田里看到一只青蛙跳进水里。","一只蜜蜂在花上停了停又飞走。","团团在树下闻到一股松脂的味道。","有只鸟从树上飞下来，又飞回去。","团团在草丛里看到一只小刺猬。","路边的石头上有只蜥蜴在晒太阳。","团团在溪边看到一只螃蟹横着走。","一只蜻蜓在水面上飞来飞去。","团团在草地上看到一只瓢虫。","有只兔子从洞里探出头来。","团团在树下看到一片蘑菇。","路边的草丛里传来沙沙声。","团团在田埂上看到一只田螺。","一只蝴蝶在团团面前跳了个舞。","团团在溪边看到一条小鱼跃出水面。","有只鸟在树上梳理羽毛。","团团在草地上看到一只蚂蚁搬家。","路边的花开了，红的黄的都有。","团团在树下看到一只蜘蛛结网。","一只蜜蜂在团团身边转了一圈。","团团在草丛里看到一只小青蛙。","有只蝴蝶落在团团鼻尖上。","团团在溪边看到几只小虾。","路边的树上有只鸟在筑巢。","团团在草地上看到一只蚂蚱跳走。","一只松鼠从树上跳下来，又跳回去。","团团在田里看到一只白鹭。","有只蜻蜓停在团团的耳朵上。","团团在树下看到一只蝉蜕。","路边的草丛里有一只刺猬。","团团在溪边看到一只乌龟慢慢爬。","一只蝴蝶在团团身边飞了一圈。","团团在草地上看到一只蜗牛。","有只鸟在树上叫了两声。","团团在树下看到一片落叶飘下来。","路边的花丛里有一只蜜蜂。","团团在田埂上看到一只青蛙。","一只蜻蜓从团团面前飞过。","团团在溪边看到几只小鱼。","有只蝴蝶落在团团的尾巴上。","团团在草地上看到一只蚂蚁。","路边的树上有只松鼠。","团团在树下看到一只蘑菇。","一只蜜蜂在团团头顶飞过。","团团在草丛里看到一只螳螂。","有只鸟在树上唱歌。","团团在溪边看到一只螃蟹。","路边的石头上有只蜥蜴。","团团在田里看到一只田鼠。","一只蝴蝶在团团面前飞过。","团团在草地上看到一只瓢虫。","有只兔子从草丛里跳出来。","团团在树下看到一只蜗牛。","路边的花丛里有一只蝴蝶。","团团在溪边看到一只白鹭。","一只蜻蜓在团团身边飞。","团团在草地上看到一只蚂蚱。","有只松鼠在树上吃松果。","团团在田埂上看到一只蚂蚁。","路边的树上有只鸟在叫。","团团在树下看到一片蘑菇。","一只蜜蜂在团团身边飞过。","团团在溪边看到一只乌龟。","有只蝴蝶落在团团的头上。","团团在草地上看到一只刺猬。","路边的草丛里有一只青蛙。","团团在田里看到一只白鹭。","一只蜻蜓停在团团的鼻子上。","团团在树下看到一只蝉。","有只鸟从团团头顶飞过。"
+  ];
+  const playNormalTexts = ["🎾 团团追着球跑了好几圈，玩得气喘吁吁！","🧶 团团滚毛线球，越滚越开心！","🪁 团团在草地上放风筝，笑得合不拢嘴！","🎠 团团坐上小秋千，荡得老高！","🫧 团团追着泡泡蹦蹦跳跳！","🏃 团团绕着院子疯跑，尾巴都快摇断了！","🪀 团团玩起了溜溜球，眼睛亮晶晶的。","🎳 团团把小球滚来滚去，自己乐得打滚。","🪃 团团扔出回旋镖，追着它满场跑。","🛝 团团从滑梯上溜下来，开心地尖叫。"];
+  const playHurtTexts = ["💥 团团跑太快摔了一跤，膝盖擦破了！","💥 团团被树枝绊倒，疼得直哼哼！","💥 团团撞到了石头，委屈巴巴地看着你！","💥 团团玩得太疯，扭到了小脚！","💥 团团被飞来的球砸中脑袋，眼冒金星！","💥 团团从秋千上滑下来，屁股摔得生疼！","💥 团团追蝴蝶时撞上了树干！","💥 团团踩到滑溜溜的青苔，四脚朝天！","💥 团团被自己的尾巴绊了一跤！","💥 团团玩回旋镖，结果砸到了自己！"];
+  const restTexts = ["🌙 团团蜷成一团，睡得很香。","🌙 团团打了个哈欠，慢慢闭上了眼睛。","🌙 团团趴在软垫上，尾巴轻轻摇晃。","🌙 团团做了个甜甜的梦，嘴角带着笑。","🌙 团团抱着小枕头，呼吸变得均匀。","🌙 团团翻了个身，嘟囔了一句梦话。","🌙 团团缩在角落里，安安静静地打盹。","🌙 团团伸了个懒腰，慢慢进入梦乡。"];
+
+  const feedTexts = [
+    "团团三口两口就把食物吞了下去，意犹未尽地舔了舔嘴巴。","团团抱着食物啃得津津有味，尾巴高兴得直摇。","团团吃得满脸都是，变成了一只小花脸猫。","食物太香了，团团吃得头都不抬。","团团发出吧唧吧唧的声音，看起来非常满足。","团团先是闻了闻，然后一口咬了下去，眼睛都亮了。","团团吃得直打嗝，但还是舍不得停下。","一阵风卷残云，盘子底都变得干干净净。","团团把食物藏在身后，生怕被别人抢走。","吃得开心了，团团在地上打了个滚。","团团细嚼慢咽，看起来像个小绅士。","食物渣掉了一地，团团正低头努力寻找。","团团抱着食物，露出了幸福的笑容。","吃得太急了，团团噎了一下，赶紧喝了口水。","团团把最好吃的一口留到了最后才吃掉。","看着眼前的食物，团团的哈喇子都快流下来了。","团团一边吃，一边发出满意的哼哼声。","吃完后，团团还意犹未尽地舔了舔碗边。","食物刚放下，团团就像小炮弹一样冲了过来。","团团把食物抛到半空中，然后一口接住。","团团对着食物端详了半天，似乎在研究从哪下口。","吃得肚子圆滚滚的，团团瘫倒在地上。","团团小心翼翼地把食物分成小块，一点点品尝。","这味道太赞了，团团开心得眯起了眼睛。","团团用两只小爪子捧着食物，吃相十分可爱。","吃完后，团团还不忘把爪子舔得干干净净。","食物一端上来，团团的耳朵立马竖了起来。","团团边吃边四处张望，像个正在做坏事的小贼。","团团把食物顶在头上，玩了一会儿才吃下去。","这顿饭似乎很合团团的胃口，它吃得非常起劲。","团团吃得津津有味，连旁边的小虫子都不去理会了。","团团把食物拱得满桌子都是，真是太调皮了。","吃饱喝足后，团团满意地拍了拍小肚子。","团团先喝了一口汤，发出一声惊叹，然后大口吃起肉来。","看着团团吃得这么香，感觉整个世界都治愈了。","团团把最后一口食物咽下去，舔了舔嘴唇。","吃得太快，团团脸上沾满了食物残渣。","团团把食物护在怀里，警惕地看着周围。","这简直是人间美味，团团的尾巴翘得老高。","团团小口小口地吃着，每一口都嚼得很仔细。","吃饱后，团团舒服地伸了个懒腰。","食物有点烫，团团一边吹气一边吃。","团团吃完后，用大眼睛盯着你，似乎还想要。","今天的美食让团团的心情大好。","团团一口吞下了一大块，腮帮子鼓鼓的。","团团拿食物当玩具，推着它在桌上滚来滚去。","吃饱了的团团，懒洋洋地趴着不想动。","团团把食物舔得干干净净，连渣都没剩。","这顿大餐让团团的快乐值直线上升。","团团一边吃一边发出满意的咕噜声。"
+  ];
+
+  const achievementsDef = [
+    { id: "firstFeed", name: "初次喂食", cond: "喂食 1 次", check: s => s.stats.feed >= 1, reward: { xp: 1 } },
+    { id: "foodie", name: "吃货", cond: "喂食 50 次", check: s => s.stats.feed >= 50, reward: { happy: 2 } },
+    { id: "adventurer", name: "冒险家", cond: "探索 30 次", check: s => s.stats.explore >= 30, reward: { xp: 5 } },
+    { id: "explorerWin", name: "探险成功", cond: "探索成功 20 次", check: s => s.stats.exploreSuccess >= 20, reward: { xp: 3 } },
+    { id: "level3", name: "升到 3 级", cond: "达到 3 级", check: s => s.level >= 3, reward: { happy: 2 } },
+    { id: "level5", name: "升到 5 级", cond: "达到 5 级", check: s => s.level >= 5, reward: { xp: 10 } },
+    { id: "fullHunger", name: "满腹", cond: "饱腹达到 100", check: s => s.hunger >= 100, reward: { happy: 1 } },
+    { id: "fullHappy", name: "元气满满", cond: "快乐达到 100", check: s => s.happy >= 100, reward: { xp: 2 } },
+    { id: "closeFriend", name: "亲密无间", cond: "亲密度达到 50", check: s => (s.intimacy || 0) >= 50, reward: { happy: 2 } },
+    { id: "soulmate", name: "心有灵犀", cond: "亲密度达到 100", check: s => (s.intimacy || 0) >= 100, reward: { xp: 10 } },
+    { id: "dreamer", name: "梦想家", cond: "累计获得 10 个梦境碎片", check: s => (s.stats.dreamShard || 0) >= 10, reward: { xp: 5 } },
+    { id: "scholar", name: "初入学堂", cond: "学历达到 小学生", check: s => s.degree !== "文盲", reward: { xp: 5 } },
+    { id: "worker", name: "打工人", cond: "累计打工 10 次", check: s => (s.stats.work || 0) >= 10, reward: { happy: 2 } },
+    { id: "passHighSchool", name: "考上高中", cond: "学历达到 普高生/中专生", check: s => s.degree.includes("普高") || s.degree === "中专生", reward: { xp: 20 } },
+    { id: "university", name: "金榜题名", cond: "学历达到 大学生/大专生", check: s => s.degree.includes("大学") || s.degree === "大专生", reward: { xp: 50 } },
+    { id: "master", name: "科研新星", cond: "学历达到 研究生", check: s => s.degree.includes("研究生"), reward: { xp: 100 } },
+    { id: "phd", name: "人类极限", cond: "学历达到 博士生", check: s => s.degree.includes("博士"), reward: { xp: 200 } },
+    { id: "examFail", name: "考试阴影", cond: "考砸了 1 次", check: s => s.examDebuffEndTime > 0, reward: { happy: 2 } },
+    { id: "wishFirst", name: "心意相通", cond: "完成 1 次团团的心愿", check: s => (s.stats.wishDone || 0) >= 1, reward: { happy: 3 } },
+    { id: "wishKeeper", name: "从不爽约", cond: "累计完成 7 次心愿", check: s => (s.stats.wishDone || 0) >= 7, reward: { xp: 20 } }
+  ];
+
+  const degrees = {
+    "文盲": { knowledge: 100, tuition: 0, next: ["小学生"] },
+    "小学生": { knowledge: 200, tuition: 0, next: ["初中生"] },
+    "初中生": { knowledge: 500, tuition: 1000, next: ["普高生-文科", "普高生-理科", "中专生"] },
+    "普高生-文科": { knowledge: 1000, tuition: 3000, next: ["大学生", "大专生"] },
+    "普高生-理科": { knowledge: 1000, tuition: 3000, next: ["大学生", "大专生"] },
+    "中专生": { knowledge: 800, tuition: 2000, next: ["大专生"] },
+    "大专生": { knowledge: 2000, tuition: 5000, next: ["成人本科"] },
+    "成人本科": { knowledge: 5000, tuition: 10000, next: ["研究生"] },
+    "大学生": { knowledge: 3000, tuition: 5000, next: ["研究生"] },
+    "研究生": { knowledge: 10000, tuition: 20000, next: ["博士生"] },
+    "博士生": { knowledge: 99999, tuition: 0, next: [] }
+  };
+
+  const jobsList = [
+    { id: "dig", name: "矿场搬砖", reqDegree: ["文盲", "小学生", "初中生", "普高生-文科", "普高生-理科", "中专生", "大专生", "大学生", "成人本科", "研究生", "博士生"], reqFields: [], pay: [15, 40], scam: 0.25, energy: 30, desc: "在矿洞里搬矿石，灰头土脸" },
+    { id: "deliver", name: "发传单", reqDegree: ["中专生", "普高生-文科", "普高生-理科", "大专生", "大学生", "成人本科", "研究生", "博士生"], reqFields: [], pay: [25, 55], scam: 0.1, energy: 25, desc: "站在街口发传单，嗓子都喊哑了" },
+    { id: "farm", name: "农场技术员", reqDegree: ["文盲", "小学生", "初中生", "中专生", "大专生", "大学生", "成人本科", "研究生", "博士生"], reqFields: ["农学"], pay: [35, 75], scam: 0.05, energy: 25, desc: "在大棚里照看作物、记录生长数据" },
+    { id: "cashier", name: "超市收银", reqDegree: ["大专生", "大学生", "成人本科", "研究生", "博士生"], reqFields: ["商学", "管理学"], pay: [40, 80], scam: 0.05, energy: 25, desc: "在收银台扫码理货，一整天没坐下" },
+    { id: "tutor", name: "家教老师", reqDegree: ["初中生", "普高生-文科", "普高生-理科", "中专生", "大专生", "大学生", "成人本科", "研究生", "博士生"], reqFields: ["教育学", "文学", "理学"], pay: [45, 95], scam: 0.05, energy: 20, desc: "给小动物们辅导功课，讲得口干舌燥" },
+    { id: "clerk", name: "办公室文员", reqDegree: ["大学生", "成人本科", "研究生", "博士生"], reqFields: ["管理学", "文学", "法学"], pay: [55, 110], scam: 0.02, energy: 20, desc: "埋头整理文书和表格" },
+    { id: "designer", name: "设计助理", reqDegree: ["大专生", "大学生", "成人本科", "研究生", "博士生"], reqFields: ["艺术学", "工学"], pay: [60, 120], scam: 0.05, energy: 25, desc: "对着画板改了一版又一版稿子" },
+    { id: "coder", name: "大厂程序员", reqDegree: ["大学生", "成人本科", "研究生", "博士生"], reqFields: ["工学", "理学"], pay: [90, 180], scam: 0.01, energy: 40, desc: "敲了一整天代码，顺手修了三个 bug" },
+    { id: "engineer", name: "土木工程师", reqDegree: ["大学生", "成人本科", "研究生", "博士生"], reqFields: ["工学"], pay: [80, 160], scam: 0.01, energy: 30, desc: "戴着安全帽跑工地、核对图纸" },
+    { id: "lab", name: "实验室助理", reqDegree: ["大学生", "成人本科", "研究生", "博士生"], reqFields: ["理学", "医学", "农学"], pay: [85, 170], scam: 0.02, energy: 30, desc: "在实验室记录数据、洗了一堆试管" },
+    { id: "nurse", name: "社区医护", reqDegree: ["大专生", "大学生", "成人本科", "研究生", "博士生"], reqFields: ["医学"], pay: [90, 175], scam: 0.02, energy: 30, desc: "挨家挨户量血压、配好药包" },
+    { id: "analyst", name: "金融分析师", reqDegree: ["大学生", "成人本科", "研究生", "博士生"], reqFields: ["商学", "管理学"], pay: [100, 200], scam: 0.01, energy: 25, desc: "对着一摞报表算到眼花" },
+    { id: "lawyer", name: "执业律师", reqDegree: ["研究生", "博士生"], reqFields: ["法学"], pay: [120, 240], scam: 0.0, energy: 30, desc: "翻案卷、写诉状，忙到深夜" },
+    { id: "professor", name: "大学教授", reqDegree: ["博士生"], reqFields: ["工学", "理学", "医学", "农学", "文学", "法学", "商学", "教育学", "艺术学", "管理学"], pay: [200, 400], scam: 0.0, energy: 20, desc: "备课、带学生，讲台上一站就是半天" }
+  ];
+
+  // ===== 亲密度闭环参数 =====
+  const PET_DAILY_INTIMACY_CAP = 15;              // 每日靠摸头最多获得的亲密度
+  const INTIMACY_DECAY_INTERVAL = 5 * 60 * 1000;  // 久不互动，每 5 分钟 -1
+  const INTIMACY_DECAY_GRACE = 5 * 60 * 1000;     // 任意互动后 5 分钟宽限期
+  const WISH_DURATION = 5 * 60 * 1000;            // 心愿限时 5 分钟（仅游戏界面计时）
+
+  // ===== v2.0.6 经验 / 精力调整参数 =====
+  const ACTION_XP_COST_CHANCE = 0.495;            // 玩耍 / 探索触发经验扣除的概率 49.5%（休息仍每次必扣）
+  const PLAY_ENERGY_EVEN_LOW_CHANCE = 0.5;        // 偶数等级下落在 1~10 低区间的概率
+
+  const WISH_DEFS = [
+    { id: "feed",    emoji: "🍎", title: "想吃你亲手喂的苹果", desc: "给团团喂食 1 次",       need: 1, gain: 8,  fail: 5 },
+    { id: "play",    emoji: "🎾", title: "想和你玩一会儿球",   desc: "陪团团玩耍 1 次",       need: 1, gain: 10, fail: 6 },
+    { id: "explore", emoji: "🌿", title: "想去外面探险",       desc: "带团团探索 1 次",       need: 1, gain: 9,  fail: 5 },
+    { id: "rest",    emoji: "🌙", title: "想睡个午觉",         desc: "让团团休息 1 次",       need: 1, gain: 8,  fail: 5 },
+    { id: "pet",     emoji: "🫳", title: "想被摸摸头",         desc: "摸摸团团 3 次",         need: 3, gain: 8,  fail: 4 },
+    { id: "study",   emoji: "📖", title: "想听你念一会儿书",   desc: "陪团团学习 1 次",       need: 1, gain: 12, fail: 7 },
+    { id: "work",    emoji: "💼", title: "想看你认真打工",     desc: "去人才市场打工 1 次",   need: 1, gain: 12, fail: 7 },
+    { id: "gift",    emoji: "🎁", title: "想要一份小礼物",     desc: "送团团 1 份礼物(520💰)", need: 1, gain: 15, fail: 8 }
+  ];
+
+  const DEFAULT_STATE = JSON.parse(JSON.stringify({
+    hunger: 70, happy: 70, xp: 0, level: 1, pet: "🥚", log: "团团醒来了！快来和它玩吧！",
+    gold: 0, inventory: { amulet: 0 },
+    intimacy: 0, dreamShards: 0, dreamTotal: 0, dreamToday: 0, dreamDate: "",
+    exploreChain: 0, prophecy: false, prophecyCount: 0, lastActionType: "",
+    energy: 100, knowledge: 0, degree: "文盲", major: "", stream: "",
+    examDebuffEndTime: 0, lastActionTime: 0,
+    lastStudyTime: 0, lastWorkTime: 0, giftUnlocked: false,
+    pendingMajorSelection: false, pendingMajor: { degree: "", title: "" }, lastSignInDate: "", signInStreak: 0,
+    petDate: "", petTodayIntimacy: 0,
+    wish: { date: "", status: "none", defId: "", progress: 0, remainMs: 0 },
+    stats: { feed: 0, play: 0, explore: 0, exploreSuccess: 0, exploreFail: 0, rest: 0, hurt: 0, work: 0, maxLevel: 1, levelUp: 0, levelDown: 0, dreamShard: 0, petTap: 0, study: 0, wishDone: 0, wishFail: 0 },
+    achievements: {}, dex: {}, dexMaster: false, dexMilestones: {}
+  }));
+  let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+
+  let isDead = false;
+  let isAskingAmulet = false;
+  let isCheating = false;
+  let isLazyWarning = false;
+  let spamCount = 0;
+  let lastFeedRestTime = 0;
+  let lastActionClickTime = 0;
+  let feedXpBuffer = 0;
+  let lastPetTapTime = 0;
+  let lastIntimacyGainAt = Date.now();
+  let learnCooldownTimer = null;
+  let workCooldownTimer = null;
+
+  const STUDY_COOLDOWN = 3 * 60 * 1000; // 学习冷却 3 分钟，改这里即可
+  const WORK_COOLDOWN = 2 * 60 * 1000;  // 打工冷却 2 分钟，改这里即可
+
+  window.cheatEngine = "safe";
+  window.cheatXP = 9999;
+
+  function generateHash(s) {
+    const raw = [s.level, s.xp, s.hunger, s.happy, s.intimacy, s.dreamShards, s.dreamTotal, s.prophecyCount,
+      s.energy, s.knowledge, s.degree, s.major, s.stream, s.gold, (s.inventory && s.inventory.amulet) || 0].join("|");
+    let h = 5381;
+    for (let i = 0; i < raw.length; i++) h = ((h << 5) + h + raw.charCodeAt(i)) >>> 0;
+    return h.toString(16);
+  }
+  function legacyHash(s) {
+    return ((s.level * 99991) ^ (s.xp * 7777) ^ (s.hunger * 33) ^ (s.happy * 69) ^ (s.stats.feed * 123) ^ ((s.gold || 0) * 456)).toString(16);
+  }
+
+  let saveTimer = null;
+  function doSave() {
+    try {
+      const hash = generateHash(state);
+      localStorage.setItem("wonderfulCreatureSave", JSON.stringify({ data: state, sign: hash }));
+    } catch (e) {}
+  }
+  function save(immediate) {
+    if (immediate) { doSave(); return; }
+    if (saveTimer) return;
+    saveTimer = setTimeout(() => { saveTimer = null; doSave(); }, 300);
+  }
+  window.addEventListener("beforeunload", () => doSave());
+
+  try {
+    const saved = localStorage.getItem("wonderfulCreatureSave");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (!parsed.sign || parsed.sign !== generateHash(parsed.data)) {
+        if (parsed.sign === legacyHash(parsed.data)) {
+          parsed.data = { ...JSON.parse(JSON.stringify(DEFAULT_STATE)), ...parsed.data, stats: { ...DEFAULT_STATE.stats, ...(parsed.data.stats || {}) } };
+          state = parsed.data;
+          save(true);
+        } else {
+          setTimeout(() => triggerDeath("检测到非法篡改本地存档，团团受到了惊吓，已经消失了。", true), 100);
+        }
+      } else {
+        state = {
+          ...state, ...parsed.data,
+          stats: { ...state.stats, ...(parsed.data.stats || {}) },
+          achievements: { ...(parsed.data.achievements || {}) },
+          dex: { ...(parsed.data.dex || {}) },
+          dexMilestones: { ...state.dexMilestones, ...(parsed.data.dexMilestones || {}) },
+          inventory: { ...state.inventory, ...(parsed.data.inventory || {}) }
+        };
+      }
+    }
+  } catch (e) {}
+
+  // 旧存档兜底：金币已达标则视为已解锁送礼
+  if (!state.giftUnlocked && state.gold >= 520) state.giftUnlocked = true;
+  if (state.lastStudyTime === undefined) state.lastStudyTime = 0;
+  if (state.lastWorkTime === undefined) state.lastWorkTime = 0;
+  // 旧存档没有 pendingMajor，补默认值；异常值也一并纠正
+  if (!state.pendingMajor || typeof state.pendingMajor !== "object") state.pendingMajor = { degree: "", title: "" };
+  // v2.0.5 旧存档兜底
+  if (!state.wish || typeof state.wish !== "object") state.wish = JSON.parse(JSON.stringify(DEFAULT_STATE.wish));
+  if (!state.petDate) state.petDate = "";
+  if (typeof state.petTodayIntimacy !== "number") state.petTodayIntimacy = 0;
+
+  let audioCtx = null;
+  function sfx(type) {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      const notes = { tap: [660, 0.06, 0.05], act: [520, 0.09, 0.07], good: [784, 0.12, 0.08], bad: [196, 0.18, 0.08], level: [523, 0.1, 0.09], coin: [988, 0.07, 0.06] };
+      const n = notes[type] || notes.tap;
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.type = "sine"; osc.frequency.value = n[0];
+      gain.gain.setValueAtTime(n[2], audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + n[1]);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(); osc.stop(audioCtx.currentTime + n[1]);
+      if (type === "level") { setTimeout(() => sfx("coin"), 110); }
+    } catch (e) {}
+  }
+
+  function message(text) { state.log = text; render(); }
+  function randomNumber(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+  function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function checkActionCooldown() {
+    const now = Date.now();
+    if (now - lastActionClickTime < 500) { return false; }
+    lastActionClickTime = now;
+    if (window.cheatEngine !== "safe" || window.cheatXP !== 9999) {
+      triggerDeath("你试图调用底层代码修改数据，团团被黑洞吞噬了。", true);
+      return false;
+    }
+    return true;
+  }
+
+  function checkSpam() {
+    if (state.level < 4) return false;
+    const now = Date.now();
+    if (now - lastFeedRestTime < 5000) { spamCount++; } else { spamCount = 1; }
+    lastFeedRestTime = now;
+    if (spamCount >= 5 && feedXpBuffer >= xpNeeded(state.level)) {
+      isLazyWarning = true;
+      feedXpBuffer = 0;
+      spamCount = 0;
+      loseXP(20);
+      document.getElementById("lazyOverlay").classList.add("show");
+      render();
+      return true;
+    }
+    return false;
+  }
+
+  function closeLazyWarning() {
+    isLazyWarning = false;
+    document.getElementById("lazyOverlay").classList.remove("show");
+  }
+
+  function weightedEdgeRandom(min, max, edgeChance = 0.05) {
+    if (max <= min) return min;
+    const roll = Math.random();
+    if (roll < edgeChance) return min;
+    if (roll < edgeChance * 2) return max;
+    const middleStart = min + 1;
+    const middleEnd = max - 1;
+    if (middleEnd < middleStart) return min + 1;
+    return randomNumber(middleStart, middleEnd);
+  }
+
+  function pickEvent() {
+    const total = eventsDef.reduce((sum, e) => sum + e.weight, 0);
+    let roll = Math.random() * total;
+    for (const e of eventsDef) { roll -= e.weight; if (roll <= 0) return e; }
+    return eventsDef[eventsDef.length - 1];
+  }
+
+  function xpNeeded(level) {
+    const table = { 1: 100, 2: 180, 3: 300, 4: 420, 5: 600 };
+    return table[level] || 600;
+  }
+
+  function petByLevel(level) {
+    let emoji = "🥚";
+    const stages = [{ min: 1, emoji: "🥚" }, { min: 2, emoji: "🐣" }, { min: 3, emoji: "🐥" }, { min: 4, emoji: "🐤" }, { min: 5, emoji: "🐔" }, { min: 6, emoji: "🦆" }, { min: 7, emoji: "🦅" }, { min: 8, emoji: "🦉" }, { min: 9, emoji: "🦚" }, { min: 10, emoji: "🐲" }, { min: 11, emoji: "🐉" }];
+    for (const stage of stages) { if (level >= stage.min) emoji = stage.emoji; }
+    return emoji;
+  }
+
+  function updatePetByLevel() { state.pet = petByLevel(state.level); }
+
+  function isHardMode() { return state.level > 5 && state.level % 2 === 0; }
+
+  function gainXP(amount) {
+    state.xp += amount;
+    let leveledUp = false;
+    while (state.xp >= xpNeeded(state.level)) {
+      state.xp = 0;
+      state.level++;
+      leveledUp = true;
+      state.stats.levelUp++;
+      if (state.level > state.stats.maxLevel) state.stats.maxLevel = state.level;
+      updatePetByLevel();
+    }
+    return leveledUp;
+  }
+
+  function loseXP(amount) {
+    if (amount <= 0) return { lost: 0, dropped: false };
+    // Lv.1~3 保护期：任何途径都不扣除经验（>3 级沿用原机制）
+    if (state.level <= 3) return { lost: 0, dropped: false };
+    if (state.xp <= 0 && state.level <= 2) return { lost: 0, dropped: false };
+    let remaining = amount, lost = 0, dropped = false;
+    const take = Math.min(remaining, state.xp);
+    state.xp -= take; remaining -= take; lost += take;
+    while (remaining > 0 && state.xp <= 0) {
+      if (state.level <= 2) { state.xp = 0; break; }
+      state.level--;
+      state.xp = xpNeeded(state.level);
+      updatePetByLevel();
+      state.stats.levelDown++;
+      dropped = true;
+      const take2 = Math.min(remaining, state.xp);
+      state.xp -= take2; remaining -= take2; lost += take2;
+    }
+    if (state.xp < 0) state.xp = 0;
+    return { lost, dropped };
+  }
+
+  function gainHappy(min = 1, max = 2) {
+    const bonus = randomNumber(min, max);
+    state.happy = Math.min(100, state.happy + bonus);
+    return bonus;
+  }
+
+  function loseHappy(min, max) {
+    const loss = randomNumber(min, max);
+    state.happy = Math.max(0, state.happy - loss);
+    return loss;
+  }
+
+  function getHappyMultiplier() {
+    if (state.examDebuffEndTime && Date.now() < state.examDebuffEndTime) return 0.8;
+    return 1.0;
+  }
+
+  function payActionCost() {
+    const hard = isHardMode();
+    const cost = hard ? randomNumber(10, 30) : randomNumber(5, 15);
+    return loseXP(cost);
+  }
+
+  // v2.0.6：玩耍不再回精力，改为随机消耗
+  // 偶数等级：50% 概率扣 1~10，其余扣 10~20；奇数等级：固定扣 10~20
+  function rollPlayEnergyCost() {
+    if (state.level % 2 === 0 && Math.random() < PLAY_ENERGY_EVEN_LOW_CHANCE) {
+      return randomNumber(1, 10);
+    }
+    return randomNumber(10, 20);
+  }
+
+  // ===== v2.0.8 同源计算 / 全局渲染 / 账目透明（不新增状态字段） =====
+  function getStudyEnergyCost() { return state.degree !== "文盲" ? 18 : 20; }
+  function getStudyHungerCost() {
+    return ["初中生", "普高生-文科", "普高生-理科", "中专生", "大专生", "大学生", "成人本科", "研究生", "博士生"].includes(state.degree) ? 13 : 15;
+  }
+
+  // 三处精力显示统一由 render() 驱动，杜绝「主界面看不到 / 学习界面一套数」
+  function renderEnergy() {
+    const e = Math.max(0, Math.min(100, state.energy == null ? 100 : state.energy));
+    const color = e <= 5 ? "linear-gradient(90deg, #ef5350, #d32f2f)" :
+                  e <= 20 ? "linear-gradient(90deg, #ffb74d, #ff9800)" : "";
+    const te = document.getElementById("energyText");
+    const be = document.getElementById("energyBar");
+    const gte = document.getElementById("gameEnergyText");
+    const gbe = document.getElementById("gameEnergyBar");
+    if (te) te.textContent = e;
+    if (be) { be.style.width = e + "%"; be.style.background = color; }
+    if (gte) gte.textContent = `${e}/100`;
+    if (gbe) { gbe.style.width = e + "%"; gbe.style.background = color; }
+    const se = document.getElementById("shopEnergyText");
+    if (se) se.textContent = e;
+    const row = document.getElementById("gameEnergyRow");
+    if (row) row.style.background = e <= 5 ? "#ffebee" : e <= 20 ? "#fff8e1" : "";
+  }
+
+  function energyTag() { return ` ⚡${state.energy}/100`; }
+  function xpCostText(r) {
+    if (!r || !r.lost) return "";                 // 未触发 / Lv.1~3 保护期：不写「经验 -0」
+    return `经验 -${r.lost}${r.dropped ? "（并降级！）" : ""}。`;
+  }
+
+  function recordDexEvent(eventId) {
+    const isNew = !state.dex[eventId];
+    if (isNew) { state.dex[eventId] = { count: 1 }; } else { state.dex[eventId].count++; }
+    return isNew;
+  }
+
+  function dexDiscoveredCount() { return Object.keys(state.dex).length; }
+
+  function checkDexMilestones() {
+    const count = dexDiscoveredCount();
+    const milestones = [{ at: 20, key: "m20", xp: 20, happy: 0 }, { at: 40, key: "m40", xp: 30, happy: 0 }, { at: 68, key: "m68", xp: 50, happy: 20 }];
+    let messages = [];
+    for (const m of milestones) {
+      if (count >= m.at && !state.dexMilestones[m.key]) {
+        state.dexMilestones[m.key] = true;
+        if (m.xp) { const lv = gainXP(m.xp); messages.push(`收集 ${m.at} 个：经验 +${m.xp}${lv ? `，升到 Lv.${state.level}` : ""}`); }
+        if (m.happy) { state.happy = Math.min(100, state.happy + m.happy); messages.push(`快乐 +${m.happy}`); }
+        if (m.at === 68) state.dexMaster = true;
+      }
+    }
+    return messages;
+  }
+
+  // ================= 学习与考试 =================
+  function startLearnTimer() {
+    if (learnCooldownTimer) clearInterval(learnCooldownTimer);
+    learnCooldownTimer = setInterval(updateLearnUI, 1000);
+  }
+
+  // 解锁学习系统后，点 📖 直接进入学习专属界面（不再是弹窗）
+  function openLearn() {
+    if (isDead || isAskingAmulet) return;
+    if (!isLearnUnlocked()) return;
+    closeAllOverlays();
+    showScreen("learn");
+
+    if (state.pendingMajorSelection) {
+      // 优先按存档里保存的「目标学历 + 标题」原样恢复
+      const pm = state.pendingMajor;
+      if (pm && pm.degree && !state.major) {
+        openMajorPicker(pm.title || `选择${pm.degree}专业`, pm.degree);
+        updateLearnUI(); startLearnTimer(); return;
+      }
+      if (state.degree === "初中生") { openMajorSelect(degrees["初中生"].next); updateLearnUI(); startLearnTimer(); return; }
+      if (["普高生-文科", "普高生-理科"].includes(state.degree)) { openMajorSelect(degrees[state.degree].next); updateLearnUI(); startLearnTimer(); return; }
+      if (["中专生", "大专生", "大学生", "成人本科"].includes(state.degree) && !state.major) { openMajorPicker(`选择${state.degree}专业`, state.degree); updateLearnUI(); startLearnTimer(); return; }
+      state.pendingMajorSelection = false;
+    }
+    showLearnView("main");
+    updateLearnUI();
+    startLearnTimer();
+  }
+
+  // 左上角灰色返回按钮：回到游戏界面，并恢复衰减/死亡判定
+  function closeLearn() {
+    if (learnCooldownTimer) { clearInterval(learnCooldownTimer); learnCooldownTimer = null; }
+    showScreen("game");
+    render();
+    if (state.pendingMajorSelection) message("📖 升学流程还没走完，随时点 📖 回学习系统继续。");
+  }
+
+  function isLearnUnlocked() {
+    return state.level >= 3 || (state.stats && state.stats.maxLevel >= 3);
+  }
+
+  function getStudyCooldownRemain() {
+    if (!state.lastStudyTime) return 0;
+    return Math.max(0, STUDY_COOLDOWN - (Date.now() - state.lastStudyTime));
+  }
+
+  function updateLearnUI() {
+    document.getElementById("learnDegreeText").textContent = state.degree + (state.major ? ` (${state.major})` : "");
+    document.getElementById("knowledgeNeed").textContent = degrees[state.degree].knowledge;
+    document.getElementById("knowledgeText").textContent = state.knowledge;
+    document.getElementById("knowledgeBar").style.width = Math.min(100, (state.knowledge / degrees[state.degree].knowledge) * 100) + "%";
+    
+    renderEnergy();
+
+    const db = document.getElementById("examDebuffNotice");
+    if (state.examDebuffEndTime && Date.now() < state.examDebuffEndTime) {
+      db.style.display = "block";
+      const min = Math.ceil((state.examDebuffEndTime - Date.now()) / 60000);
+      db.textContent = `⚠️ 考试阴影中：快乐收益降低 20% (剩余 ${min} 分钟)`;
+    } else {
+      db.style.display = "none";
+    }
+
+    const pBtn = document.getElementById("promoteBtn");
+    const currentDegreeInfo = degrees[state.degree];
+    if (state.knowledge >= currentDegreeInfo.knowledge && currentDegreeInfo.next.length > 0) {
+      pBtn.style.display = "block";
+      pBtn.textContent = `🎓 参加升学考试 (需交学费 ${currentDegreeInfo.tuition} 金币)`;
+    } else {
+      pBtn.style.display = "none";
+    }
+
+    const studyBtn = document.getElementById("studyBtn");
+    if (studyBtn) {
+      const remain = getStudyCooldownRemain();
+      if (remain > 0) {
+        studyBtn.disabled = true;
+        const m = Math.floor(remain / 60000);
+        const s = Math.floor((remain % 60000) / 1000);
+        studyBtn.textContent = `📖 学习 (冷却中 ${m}:${s.toString().padStart(2, "0")})`;
+      } else {
+        const need = getStudyEnergyCost();
+        const lack = state.energy < need;
+        studyBtn.disabled = lack;
+        studyBtn.textContent = lack
+          ? `📖 学习 (精力不足 ⚡${state.energy}/需 ${need})`
+          : `📖 学习 (耗${getStudyHungerCost()}饱腹/10快乐/${need}精力)`;
+      }
+    }
+
+    const info = document.getElementById("learnMajorInfo");
+    if (info) {
+      const mo = majorList.find(m => m.name === state.major);
+      const next = degrees[state.degree].next.length ? degrees[state.degree].next.join(" / ") : "已是最高学历";
+      info.textContent = mo
+        ? `🎓 专业：${state.major}（${mo.field}）　📈 下一学历：${next}`
+        : `🎓 专业：尚未选择　📈 下一学历：${next}`;
+    }
+  }
+
+  function study() {
+    if (isDead || isAskingAmulet || !checkActionCooldown()) return;
+    const remain = getStudyCooldownRemain();
+    if (remain > 0) {
+      const m = Math.floor(remain / 60000);
+      const s = Math.floor((remain % 60000) / 1000);
+      alert(`学习冷却中，还需等待 ${m} 分 ${s} 秒。`);
+      return;
+    }
+    const studyEnergyNeed = getStudyEnergyCost();
+    if (state.energy < studyEnergyNeed) { alert(`精力不足！学习需要 ⚡${studyEnergyNeed}，当前只有 ⚡${state.energy}。先让团团休息一下吧。`); return; }
+    if (state.hunger < 15 || state.happy < 10) { alert("团团太饿或太难过，学不进去了！"); return; }
+    state.lastStudyTime = Date.now();
+
+    // === 学历被动效果：消耗减免（与门槛、按钮文案同源，不再各写一份） ===
+    const energyCost = getStudyEnergyCost();   // 文盲 20 / 小学及以上 18
+    const hungerCost = getStudyHungerCost();   // 初中及以上 13 / 其余 15
+    
+    let happyBonusText = "";
+    // 研究生（及更高）：热爱科研，额外 +3 快乐
+    if (["研究生", "博士生"].includes(state.degree)) {
+      state.happy = Math.min(100, state.happy + 3);
+      happyBonusText = " (科研使我快乐 +3)";
+    }
+
+    state.hunger = Math.max(0, state.hunger - hungerCost);
+    state.happy = Math.max(0, state.happy - 10);
+    state.energy = Math.max(0, state.energy - energyCost);
+    state.stats.study = (state.stats.study || 0) + 1;
+    const studyCount = state.stats.study;
+
+    // === 学历被动效果：学识增益 ===
+    let kGain = randomNumber(10, 15);
+    let soulText = "";
+
+    // 博士生：降维打击，基础 +5
+    if (state.degree === "博士生") {
+      kGain += 5;
+    }
+    
+    // 普高生：学霸之魂
+    if (["普高生-文科", "普高生-理科"].includes(state.degree)) {
+      if (Math.random() < 0.45) { // 45% 触发觉醒
+        if (Math.random() < 0.399) { // 39.9% 概率双倍
+          kGain *= 2;
+          soulText = "【学霸之魂】觉醒！学识翻倍！ ";
+        } else {
+          soulText = "【学霸之魂】闪烁了一下…… ";
+        }
+      }
+    }
+
+    // 文理科惩罚
+    if (state.stream === "文科" && state.major && majorList.find(m => m.name === state.major && m.type === "science")) {
+      kGain = Math.round(kGain * 0.5);
+    }
+    
+    state.knowledge += kGain;
+    
+    // === 图鉴判定 ===
+    let dexText = "";
+    const checkDex = (id) => {
+      if (!state.dex[id]) {
+        recordDexEvent(id);
+        const ev = studyDexDef.find(e => e.id === id);
+        if (ev) {
+          dexText += ` 📖 图鉴新增：【${ev.emoji} ${ev.name}】${ev.successText}`;
+          showDexPopup(ev.name, ev.emoji);
+        }
+      }
+    };
+
+    if (studyCount === 5) checkDex("s_5");
+    if (studyCount === 20) checkDex("s_20");
+    if (studyCount === 50) checkDex("s_50");
+    if (studyCount === 100) checkDex("s_100");
+    if (studyCount === 200) checkDex("s_200");
+
+    if (state.knowledge >= 100) checkDex("s_k100");
+    if (state.knowledge >= 500) checkDex("s_k500");
+    if (state.knowledge >= 1000) checkDex("s_k1000");
+    if (state.knowledge >= 2000) checkDex("s_k2000");
+    if (state.knowledge >= 5000) checkDex("s_k5000");
+
+    if (studyCount > 10 && Math.random() < 0.15) {
+      const randoms = ["s_eat", "s_bird", "s_ant", "s_phone", "s_sleep"];
+      checkDex(pickRandom(randoms));
+    }
+
+    sfx("good");
+    message(`📖 ${soulText}团团专心学习，获得 ${kGain} 学识。${happyBonusText} 饱腹 -${hungerCost}，快乐 -10，精力 -${energyCost}。${energyTag()}。${dexText}`);
+    render();
+    updateLearnUI();
+    onWishAction("study");
+  }
+  function buyTutoring() {
+    if (isDead || isAskingAmulet || !checkActionCooldown()) return;
+    if (state.gold < 2000) { alert("金币不足！"); return; }
+    state.gold -= 2000;
+    state.knowledge += 50;
+    sfx("coin");
+    message("💸 报了终极押题班，学识直接 +50！");
+    render();
+    updateLearnUI();
+  }
+
+  function tryPromote() {
+    if (isDead || isAskingAmulet || !checkActionCooldown()) return;
+    const info = degrees[state.degree];
+    if (state.knowledge < info.knowledge) { alert("学识不足！"); return; }
+    if (state.gold < info.tuition) { alert("学费不足！快去打工吧！"); return; }
+
+    state.gold -= info.tuition;
+    
+    let passRate = 0.7;
+    if (state.energy < 30) passRate -= 0.4;
+    if (state.happy < 30) passRate -= 0.2;
+
+    const pass = Math.random() < passRate;
+    const checkDex = (id) => {
+      if (!state.dex[id]) {
+        recordDexEvent(id);
+        const ev = studyDexDef.find(e => e.id === id);
+        if (ev) showDexPopup(ev.name, ev.emoji);
+      }
+    };
+    
+    if (pass) {
+      sfx("level");
+      state.knowledge = 0;
+      
+      // === 学历被动：大专/大学生返还学费 ===
+      let refundText = "";
+      if (["大专生", "大学生", "成人本科"].includes(state.degree) && info.tuition > 0) {
+        const refund = Math.floor(info.tuition * 0.35); // 35% 返还
+        state.gold += refund;
+        refundText = `\n📚 学历补贴：返还 35% 学费 💰${refund}！`;
+      }
+      
+      if (state.degree === "初中生") checkDex("s_zx");
+      if (info.next.includes("大学生") || info.next.includes("大专生")) checkDex("s_gk");
+      if (state.degree === "大学生" || state.degree === "成人本科") checkDex("s_ky");
+      if (state.degree === "研究生") checkDex("s_bs");
+
+      if (info.next.length === 1) {
+        state.degree = info.next[0];
+        if (state.degree === "普高生-文科") state.stream = "文科";
+        if (state.degree === "普高生-理科") state.stream = "理科";
+        alert(`🎉 考试通过！团团升学成为了 ${state.degree}！${refundText}`);
+        showLearnView("main"); // 留在学习界面，不跳回游戏界面
+      } else {
+        state.pendingMajorSelection = true; // 打上待选标记
+        if (refundText) {
+          alert(`🎉 考试通过！${refundText}`);
+        }
+        openMajorSelect(info.next);
+      }
+    } else {
+      sfx("bad");
+      checkDex("s_fail");
+      state.examDebuffEndTime = Date.now() + 5 * 60 * 1000;
+      const beforeIntimacy = state.intimacy;
+      state.intimacy = Math.max(0, state.intimacy - 15);
+      const lostIntimacy = beforeIntimacy - state.intimacy;
+      state.log = `💔 考砸了！团团陷入自我怀疑：5 分钟【考试阴影】、亲密度 -${lostIntimacy}（陪它完成心愿可以补回来）。`;
+      alert(`💔 考砸了！团团陷入了深深的自我怀疑，获得 5 分钟【考试阴影】，亲密度 -${lostIntimacy}。`);
+    }
+    render();
+    updateLearnUI();
+  }
+  // ==== 专业选择链路 ====
+  function openMajorSelect(choices) {
+    // 回到分流选择时，清掉上一次选专业的暂存信息
+    state.pendingMajor = { degree: "", title: "" };
+    showLearnView("stream");
+    document.getElementById("streamTitle").textContent = "命运的岔路口";
+    const container = document.getElementById("streamChoices");
+    container.innerHTML = "";
+    if (choices.length > 3) { openMajorPicker("选择专业", choices[0]); return; }
+    choices.forEach(choice => {
+      const btn = document.createElement("button");
+      btn.style.cssText = "width:100%;background:#e3f2fd;font-size:15px;padding:12px;";
+      btn.textContent = "🎓 " + choice;
+      btn.onclick = () => selectStream(choice);
+      container.appendChild(btn);
+    });
+  }
+
+  function openMajorPicker(title, targetDegree) {
+    // 目标学历与标题写进存档，刷新后仍能带原标题恢复
+    state.pendingMajor = { degree: targetDegree, title: title };
+    state.pendingMajorSelection = true;
+    showLearnView("major");
+    document.getElementById("majorTitle").textContent = title;
+    const search = document.getElementById("majorSearch");
+    search.value = "";
+    search.style.display = "block";
+    currentField = "全部";
+    majorPage = 0;
+    recommendSeed = 0;
+    renderFieldChips();
+    renderMajorResults("");
+  }
+
+  function selectStream(choice) {
+    if (choice === "普高生-文科") { state.degree = "普高生-文科"; state.stream = "文科"; state.major = ""; finishStreamSelect(choice); return; }
+    if (choice === "普高生-理科") { state.degree = "普高生-理科"; state.stream = "理科"; state.major = ""; finishStreamSelect(choice); return; }
+    if (choice === "中专生") { state.degree = "中专生"; state.stream = ""; state.major = ""; openMajorPicker("选择中专专业", "中专生"); return; }
+    if (choice === "大学生") { state.major = ""; openMajorPicker("选择大学专业", "大学生"); return; }
+    if (choice === "大专生") { state.major = ""; openMajorPicker("选择大专专业", "大专生"); return; }
+    state.degree = choice;
+    finishStreamSelect(choice);
+  }
+
+  function finishStreamSelect(choice) {
+    state.pendingMajorSelection = false;
+    state.pendingMajor = { degree: "", title: "" };
+    showLearnView("main");
+    alert(`🎉 团团成功升入 ${choice}！`);
+    render();
+    updateLearnUI();
+  }
+
+  function selectMajor(majorName) {
+    state.major = majorName;
+    if (state.pendingMajor && state.pendingMajor.degree) state.degree = state.pendingMajor.degree;
+    state.pendingMajor = { degree: "", title: "" };
+    state.pendingMajorSelection = false;
+    lastMajorResults = [];
+    showLearnView("main");
+    alert(`🎉 恭喜团团选择了「${majorName}」专业，当前学历：${state.degree}！`);
+    render();
+    updateLearnUI();
+  }
+
+  // ===== 250 个专业的选择交互：搜索 + 领域标签 + 随机推荐，永不列长表 =====
+  const MAJOR_FIELDS = ["全部", "工学", "理学", "医学", "农学", "文学", "法学", "商学", "教育学", "艺术学", "管理学"];
+  const MAJOR_PAGE_SIZE = 12;
+  let currentField = "全部";
+  let majorPage = 0;
+  let recommendSeed = 0;
+  let lastMajorResults = [];
+
+  function getAllowedMajors() {
+    let list = majorList;
+    if (state.stream === "文科") list = list.filter(m => m.type !== "science");
+    if (state.stream === "理科") list = list.filter(m => m.type === "science" || m.type === "business");
+    return list;
+  }
+
+  function renderFieldChips() {
+    const box = document.getElementById("majorFieldChips");
+    if (!box) return;
+    box.innerHTML = "";
+    MAJOR_FIELDS.forEach(f => {
+      const chip = document.createElement("span");
+      chip.className = "field-chip" + (f === currentField ? " active" : "");
+      chip.textContent = f === "全部" ? "🌟 全部" : f;
+      chip.onclick = () => { currentField = f; majorPage = 0; renderFieldChips(); filterMajors(); };
+      box.appendChild(chip);
+    });
+  }
+
+  function majorSearchKey(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (lastMajorResults.length) selectMajor(lastMajorResults[0]);
+    }
+  }
+
+  function filterMajors() {
+    majorPage = 0;
+    const query = (document.getElementById("majorSearch").value || "").trim().toLowerCase();
+    renderMajorResults(query);
+  }
+
+  function shuffleMajors() {
+    const query = (document.getElementById("majorSearch").value || "").trim().toLowerCase();
+    majorPage++;
+    recommendSeed++;
+    renderMajorResults(query);
+  }
+
+  function renderMajorResults(query) {
+    const container = document.getElementById("majorListContainer");
+    const hint = document.getElementById("majorHint");
+    container.innerHTML = "";
+
+    let list = getAllowedMajors();
+    if (currentField !== "全部") list = list.filter(m => m.field === currentField);
+    if (query) list = list.filter(m => m.name.toLowerCase().includes(query) || m.field.toLowerCase().includes(query));
+
+    const isBrowse = !query && currentField === "全部";
+    let showList, total = list.length;
+    if (isBrowse) {
+      // 浏览态：随机推荐一屏，不把 250 个全铺出来
+      const pool = list.slice();
+      let seed = (recommendSeed + 1) * 9301 + 49297;
+      for (let i = pool.length - 1; i > 0; i--) {
+        seed = (seed * 9301 + 49297) % 233280;
+        const j = Math.floor((seed / 233280) * (i + 1));
+        const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+      }
+      showList = pool.slice(0, MAJOR_PAGE_SIZE);
+      hint.innerHTML = `🎲 共 <strong>${total}</strong> 个专业，这里随机推荐 ${showList.length} 个。点上方领域标签或搜关键字（如「医学」「设计」）精准定位，按回车可直接选第一个。`;
+    } else {
+      const pages = Math.max(1, Math.ceil(total / MAJOR_PAGE_SIZE));
+      const start = majorPage % pages;
+      showList = list.slice(start * MAJOR_PAGE_SIZE, start * MAJOR_PAGE_SIZE + MAJOR_PAGE_SIZE);
+      hint.innerHTML = `🔍 匹配 <strong>${total}</strong> 个${currentField !== "全部" ? `（${currentField}）` : ""}，显示第 ${start + 1}/${pages} 批。${total > MAJOR_PAGE_SIZE ? "输入更精确的关键字可缩小范围，或点「🎲 换一批」翻页。" : ""}`;
+    }
+
+    lastMajorResults = showList.map(m => m.name);
+    if (!showList.length) {
+      const empty = document.createElement("div");
+      empty.className = "major-empty";
+      empty.textContent = "没有匹配的专业，换个关键词或点「🌟 全部」试试～";
+      container.appendChild(empty);
+      return;
+    }
+    showList.forEach(m => {
+      const div = document.createElement("div");
+      div.className = "major-card";
+      div.innerHTML = `${m.name}<span class="m-field">${m.field} · ${m.type === "science" ? "理" : m.type === "arts" ? "文" : "商"}</span>`;
+      div.onclick = () => selectMajor(m.name);
+      container.appendChild(div);
+    });
+  }
+
+  function closeMajor() { showLearnView("main"); }
+
+  // 暂缓选择：回到学习主视图，保留升学暂存信息，下次进来可原样继续
+  function cancelMajor() {
+    showLearnView("main");
+    if (state.pendingMajorSelection) {
+      message("📖 已暂缓选择，随时回学习系统继续（进度不会丢失）。");
+    }
+  }
+  // ================= 打工系统 =================
+  function openWork() {
+    if (isDead || isAskingAmulet) return;
+    renderJobs();
+    document.getElementById("workOverlay").classList.add("show");
+    if (workCooldownTimer) clearInterval(workCooldownTimer);
+    workCooldownTimer = setInterval(renderJobs, 1000);
+  }
+
+  function closeWork() {
+    document.getElementById("workOverlay").classList.remove("show");
+    if (workCooldownTimer) { clearInterval(workCooldownTimer); workCooldownTimer = null; }
+  }
+
+  function getWorkCooldownRemain() {
+    if (!state.lastWorkTime) return 0;
+    return Math.max(0, WORK_COOLDOWN - (Date.now() - state.lastWorkTime));
+  }
+
+  function renderJobs() {
+    const container = document.getElementById("jobList");
+    container.innerHTML = "";
+    const remain = getWorkCooldownRemain();
+    const mo = majorList.find(m => m.name === state.major);
+    const field = mo ? mo.field : "";
+    let visible = 0;
+    jobsList.forEach(job => {
+      const hasDegree = job.reqDegree.includes(state.degree);
+      const hasField = job.reqFields.length === 0 || (field && job.reqFields.includes(field));
+      if (hasDegree && hasField) {
+        visible++;
+        const div = document.createElement("div");
+        div.className = "job-card";
+        div.innerHTML = `
+          <div>
+            <strong style="color:#455a64;">${job.name}</strong><br>
+            <span style="font-size:11px; color:#78909c;">${job.desc}</span><br>
+            <span style="font-size:12px; color:#2e7d32;">💰 ${job.pay[0]}~${job.pay[1]}</span>
+            <span style="font-size:12px; color:#d32f2f; margin-left:10px;">精力 -${job.energy}（当前 ⚡${state.energy} / 需 ${job.energy}）</span>
+          </div>
+        `;
+        const btn = document.createElement("button");
+        btn.style.background = "#80cbc4";
+        if (remain > 0) {
+          btn.disabled = true;
+          btn.textContent = `冷却 ${Math.ceil(remain / 1000)}s`;
+        } else if (state.energy < job.energy) {
+          btn.disabled = true;
+          btn.style.background = "#cfd8dc";
+          btn.textContent = `精力不足 ⚡${state.energy}/${job.energy}`;
+        } else {
+          btn.textContent = "就职";
+          btn.onclick = () => doJob(job);
+        }
+        div.appendChild(btn);
+        container.appendChild(div);
+      }
+    });
+    if (!visible) {
+      container.innerHTML = `<p style="font-size:13px;color:#90a4ae;text-align:center;line-height:1.6;">当前学历 / 专业领域还没有对口岗位。<br>「矿场搬砖」「发传单」不限专业，随时可以干～</p>`;
+    }
+  }
+
+  function doJob(job) {
+    if (isDead || isAskingAmulet || !checkActionCooldown()) return;
+    const remain = getWorkCooldownRemain();
+    if (remain > 0) {
+      alert(`打工冷却中，还需等待 ${Math.ceil(remain / 1000)} 秒。`);
+      return;
+    }
+    if (state.energy < job.energy) { alert(`精力不足！${job.name} 需要 ⚡${job.energy}，当前只有 ⚡${state.energy}。先休息一下吧。`); return; }
+    state.lastWorkTime = Date.now();
+
+    state.energy -= job.energy;
+    state.stats.work = (state.stats.work || 0) + 1;
+
+    const mo = majorList.find(m => m.name === state.major);
+    const field = mo ? mo.field : "";
+    const flavor = field ? `（${field}对口）` : "";
+    const scene = pickRandom(workTexts);
+    const isScammed = Math.random() < job.scam;
+    if (isScammed) {
+      message(`💼 团团去当${job.name}${flavor}，${scene} 结果遇到黑心老板跑路了，一分钱没拿到！精力 -${job.energy}。${energyTag()}。`);
+      sfx("bad");
+    } else {
+      const earned = randomNumber(job.pay[0], job.pay[1]);
+      state.gold += earned;
+      message(`💼 团团作为${job.name}${flavor}，${job.desc}。${scene} 赚到了 💰${earned} 金币！精力 -${job.energy}。${energyTag()}。`);
+      sfx("coin");
+    }
+
+    checkAchievements();
+    closeWork();
+    render();
+    document.getElementById('shopGoldText').textContent = state.gold;
+    onWishAction("work");
+  }
+
+  // ================= 💌 团团的小心愿（亲密度专属玩法） =================
+  function getWishDef() { return WISH_DEFS.find(d => d.id === state.wish.defId); }
+
+  function canOfferWish(def) {
+    if (def.id === "study" && !isLearnUnlocked()) return false;
+    if (def.id === "gift" && state.gold < 520) return false;
+    return true;
+  }
+
+  function rollWishIfNeeded() {
+    const today = new Date().toDateString();
+    if (state.wish.date === today && state.wish.defId) return;
+    const pool = WISH_DEFS.filter(canOfferWish);
+    const def = pickRandom(pool.length ? pool : WISH_DEFS.slice(0, 4));
+    state.wish = { date: today, status: "none", defId: def.id, progress: 0, remainMs: 0 };
+    save(true);
+  }
+
+  function fmtWishTime(ms) {
+    const sec = Math.max(0, Math.ceil(ms / 1000));
+    return `${Math.floor(sec / 60)}:${(sec % 60).toString().padStart(2, "0")}`;
+  }
+
+  function showWishPopup(title, text) {
+    const container = document.getElementById("achPopups");
+    if (!container) return;
+    const popup = document.createElement("div");
+    popup.className = "ach-popup";
+    popup.style.background = "linear-gradient(135deg, #ffffff, #fce4ec)";
+    popup.style.borderLeftColor = "#ec407a";
+    popup.innerHTML = `<div class="p-title" style="color:#ad1457;">${title}</div><div class="p-name">${text}</div><div class="p-hint">点击关闭</div>`;
+    popup.onclick = () => { popup.classList.add("fade-out"); setTimeout(() => popup.remove(), 500); };
+    container.appendChild(popup);
+    setTimeout(() => { if (popup.parentNode) { popup.classList.add("fade-out"); setTimeout(() => popup.remove(), 500); } }, 4000);
+  }
+
+  function renderWishPanel() {
+    rollWishIfNeeded();
+    const w = state.wish, def = getWishDef();
+    const body = document.getElementById("wishBody");
+    const stats = document.getElementById("wishStats");
+    if (!def) { body.innerHTML = ""; return; }
+    stats.textContent = `累计完成 ${state.stats.wishDone || 0} 次 · 爽约 ${state.stats.wishFail || 0} 次`;
+
+    let action = "";
+    if (w.status === "none") {
+      action = `<button onclick="acceptWish()" style="width:100%;background:#ec407a;color:white;font-size:17px;padding:13px;font-weight:bold;">💌 接下约定</button>`;
+    } else if (w.status === "active") {
+      action = `<div style="font-size:13px;color:#6a1b9a;background:#f3e5f5;border-radius:10px;padding:10px;line-height:1.7;">约定已接下，关掉面板去完成吧～<br>倒计时在离开游戏界面时会自动暂停。</div>`;
+    } else if (w.status === "done") {
+      action = `<div style="font-size:14px;color:#2e7d32;font-weight:bold;padding:10px;">✅ 今天的心愿已经完成，团团超开心！明天再来～</div>`;
+    } else {
+      action = `<div style="font-size:14px;color:#d32f2f;font-weight:bold;padding:10px;">💔 今天爽约了，团团有点失落。明天早点来陪它吧～</div>`;
+    }
+
+    const meta = w.status === "active"
+      ? `<div class="wish-meta"><span>进度 <b>${w.progress}/${def.need}</b></span><span>剩余 <b id="wishCountdown">${fmtWishTime(w.remainMs)}</b></span><span>完成 <b>+${def.gain}</b> 亲密</span></div>`
+      : `<div class="wish-meta"><span>完成 <b>+${def.gain}</b> 亲密</span><span>超时 <b>-${def.fail}</b> 亲密</span><span>需要 <b>${def.need}</b> 次</span></div>`;
+
+    body.innerHTML = `
+      <div class="wish-card">
+        <div class="w-emoji">${def.emoji}</div>
+        <div class="w-title">「${def.title}」</div>
+        <div class="w-desc">${def.desc}</div>
+      </div>
+      ${meta}
+      ${action}
+    `;
+  }
+
+  function openWish() {
+    if (isDead || isAskingAmulet) return;
+    renderWishPanel();
+    document.getElementById("wishOverlay").classList.add("show");
+  }
+
+  function closeWish() {
+    document.getElementById("wishOverlay").classList.remove("show");
+    updateWishUI();
+  }
+
+  function acceptWish() {
+    if (state.wish.status !== "none") return;
+    const def = getWishDef();
+    if (!def) return;
+    state.wish.status = "active";
+    state.wish.progress = 0;
+    state.wish.remainMs = WISH_DURATION;
+    closeWish();
+    sfx("act");
+    message(`💌 接下了团团的小心愿：「${def.title}」！5 分钟内完成 ${def.desc} 吧～`);
+    save(true);
+  }
+
+  function completeWish() {
+    const def = getWishDef();
+    if (!def || state.wish.status !== "active") return;
+    state.wish.status = "done";
+    const before = state.intimacy;
+    state.intimacy = Math.min(100, state.intimacy + def.gain);
+    const realGain = state.intimacy - before;
+    state.happy = Math.min(100, state.happy + 3);
+    state.gold += 15;
+    state.stats.wishDone = (state.stats.wishDone || 0) + 1;
+    lastIntimacyGainAt = Date.now();
+    showWishPopup("💌 心愿达成", `${def.emoji} 亲密度 +${realGain} · 快乐 +3 · 💰15`);
+    sfx("good");
+    render();
+    save(true);
+  }
+
+  function failWish() {
+    const def = getWishDef();
+    if (!def || state.wish.status !== "active") return;
+    state.wish.status = "failed";
+    state.wish.remainMs = 0;
+    const before = state.intimacy;
+    state.intimacy = Math.max(0, state.intimacy - def.fail);
+    const realLost = before - state.intimacy;
+    state.stats.wishFail = (state.stats.wishFail || 0) + 1;
+    sfx("bad");
+    message(`💔 约定超时了……团团等了很久没等到「${def.title}」，有点失落。亲密度 -${realLost}，明天再陪它吧。`);
+    save(true);
+  }
+
+  // 所有动作统一走这里：刷新「陪伴」宽限期 + 推进心愿进度
+  function onWishAction(actionId) {
+    lastIntimacyGainAt = Date.now();
+    if (state.wish.status !== "active" || state.wish.defId !== actionId) return;
+    const def = getWishDef();
+    if (!def) return;
+    state.wish.progress = (state.wish.progress || 0) + 1;
+    if (state.wish.progress >= def.need) completeWish();
+    else { render(); save(true); }
+  }
+
+  function updateWishUI() {
+    rollWishIfNeeded();
+    const w = state.wish;
+    const def = getWishDef();
+    const dot = document.getElementById("wishDot");
+    const banner = document.getElementById("wishBanner");
+    if (dot) dot.style.display = (w.status === "none") ? "block" : "none";
+    if (banner) {
+      if (w.status === "active" && def) {
+        banner.style.display = "block";
+        banner.innerHTML = `💌 <b>${def.title}</b> · 进度 ${w.progress}/${def.need} · 剩余 ${fmtWishTime(w.remainMs)} <span style="float:right;opacity:.7;">点我查看 ›</span>`;
+      } else if (w.status === "done") {
+        banner.style.display = "block";
+        banner.innerHTML = `✅ 今日心愿已完成，团团超开心！<span style="float:right;opacity:.7;">点我查看 ›</span>`;
+      } else if (w.status === "failed") {
+        banner.style.display = "block";
+        banner.innerHTML = `💔 今日约定爽约了，明天早点来陪它～<span style="float:right;opacity:.7;">点我查看 ›</span>`;
+      } else {
+        banner.style.display = "none";
+      }
+    }
+    const cd = document.getElementById("wishCountdown");
+    const ov = document.getElementById("wishOverlay");
+    if (cd && ov && ov.classList.contains("show") && w.status === "active") {
+      cd.textContent = fmtWishTime(w.remainMs);
+    }
+  }
+
+  // ================= 基础逻辑 =================
+  function feed() {
+    if (isDead || isAskingAmulet || isLazyWarning || !checkActionCooldown()) return;
+    if (checkSpam()) return;
+
+    state.stats.feed = (state.stats.feed || 0) + 1;
+
+    const wasFull = state.hunger >= 100;
+    let coinText = "";
+    if (state.gold >= 888) {
+      const lost = randomNumber(1, 3);
+      state.gold -= lost;
+      coinText = ` 财富太多，团团挑食花掉了 💰${lost} 金币。`;
+    }
+
+    if (wasFull) {
+      const loss = loseHappy(5, 10);
+      state.intimacy = Math.max(0, state.intimacy - 2);
+      sfx("bad");
+      message(`🍎 团团已经吃撑啦！快乐值减少 ${loss} 点，亲密度 -2。${coinText}`);
+      return;
+    }
+    state.hunger = Math.min(100, state.hunger + 20);
+    state.intimacy = Math.min(100, state.intimacy + 1);
+    
+    let happyText = "";
+    if (state.happy >= 80) { happyText = "快乐值已很高。"; } 
+    else {
+      const bonus = Math.round(gainHappy(1, 2) * getHappyMultiplier());
+      happyText = `快乐值增加 ${bonus} 点。`;
+    }
+    
+    const xp = randomNumber(5, 10);
+    feedXpBuffer += xp;
+    const leveledUp = gainXP(xp);
+    checkAchievements();
+    
+    let text = `🍎 喂食：团团吃得津津有味！${happyText}${coinText} 获得经验 ${xp} 点。`;
+    if (leveledUp) text += ` 🎉 升级到 Lv.${state.level}！经验已清零。`;
+    message(text);
+    onWishAction("feed");
+  }
+
+  function play() {
+    if (isDead || isAskingAmulet || isLazyWarning || !checkActionCooldown()) return;
+    state.stats.play++;
+    
+    if (state.knowledge > 0) {
+      state.knowledge = Math.max(0, state.knowledge - 5);
+    }
+
+    const xpCost = (Math.random() < ACTION_XP_COST_CHANCE) ? payActionCost() : null; // 49.5% 概率触发经验扣除
+    const hungerLoss = randomNumber(5, 10);
+    state.hunger = Math.max(0, state.hunger - hungerLoss);
+    const energyCost = rollPlayEnergyCost();
+    state.energy = Math.max(0, state.energy - energyCost);
+
+    let hurtChance = isHardMode() ? 0.49 : 0.35;
+    if (state.intimacy >= 50) hurtChance = Math.max(0.1, hurtChance - 0.10);
+    const hurt = Math.random() < hurtChance;
+    let happyText = "", sceneText = "";
+    if (hurt) {
+      state.stats.hurt++;
+      const loss = loseHappy(10, 20);
+      sceneText = pickRandom(playHurtTexts);
+      happyText = `快乐值 -${loss}。`;
+    } else {
+      const bonus = Math.round((isHardMode() ? gainHappy(1, 3) : gainHappy(4, 8)) * getHappyMultiplier());
+      sceneText = pickRandom(playNormalTexts);
+      happyText = `快乐值 +${bonus}。`;
+    }
+    
+    const intGain = (!hurt && Math.random() < 0.1) ? 4 : 2;
+    state.intimacy = Math.min(100, state.intimacy + intGain);
+    const xp = randomNumber(1, 5);
+    const leveledUp = gainXP(xp);
+    checkAchievements();
+    sfx(hurt ? "bad" : "good");
+    let text = `🎾 玩耍：${sceneText} 饱腹度 -${hungerLoss}，精力 -${energyCost}，${happyText} 亲密度 +${intGain}，经验 +${xp}。${xpCostText(xpCost)}贪玩导致学识 -5。${energyTag()}。`;
+    if (leveledUp) text += ` 🎉 升级！`;
+    message(text);
+    onWishAction("play");
+  }
+
+  function explore() {
+    if (isDead || isAskingAmulet || isLazyWarning || !checkActionCooldown()) return;
+    state.stats.explore++;
+    const xpCost = (Math.random() < ACTION_XP_COST_CHANCE) ? payActionCost() : null; // 49.5% 概率触发经验扣除
+    const hungerLoss = randomNumber(10, 15);
+    state.hunger = Math.max(0, state.hunger - hungerLoss);
+    
+    let isDexRun = Math.random() < (state.hunger < 30 ? 0.04 : 0.10);
+    let happyText = "";
+    let text = "", xpGain = 0, extraXp = 0, leveledUp = false;
+    
+    if (isDexRun) {
+      const ev = pickEvent();
+      const isNew = recordDexEvent(ev.id);
+      const success = Math.random() < 0.5;
+      if (success) { 
+        state.stats.exploreSuccess = (state.stats.exploreSuccess || 0) + 1;
+        const baseHappy = randomNumber(1, 2); // 成功获得 1~2 点
+        const hBonus = Math.round(baseHappy * getHappyMultiplier());
+        happyText = ` 心情大好，快乐值 +${hBonus}。`;
+      } else { 
+        state.stats.exploreFail = (state.stats.exploreFail || 0) + 1;
+        const hLoss = loseHappy(1, 2); // 失败扣除 1~2 点
+        happyText = ` 遇到点小挫折，快乐值 -${hLoss}。`;
+      }
+      
+      let sceneText = success ? ev.successText : ev.failText;
+      xpGain = randomNumber(1, 15);
+      if (isNew) { extraXp = 5; showDexPopup(ev.name, ev.emoji); }
+      leveledUp = gainXP(xpGain + extraXp);
+      text = `🌿 探索：${ev.emoji} ${sceneText} 获得经验 ${xpGain} 点。${happyText}`;
+      if (isNew) text += ` 📖 图鉴新增！`;
+      const milestoneMsgs = checkDexMilestones();
+      if (milestoneMsgs.length) text += ` 🏅 ${milestoneMsgs.join("；")}。`;
+    } else {
+      const sceneText = pickRandom(ambientTexts);
+      xpGain = randomNumber(0, 2);
+      leveledUp = gainXP(xpGain);
+      // 普通探索稳定 +1，但受阴影影响，如果随机值小于 0.8（即 20% 概率）则不加
+      const hBonus = Math.random() < getHappyMultiplier() ? 1 : 0;
+      const happyMsg = hBonus > 0 ? `，快乐值 +${hBonus}。` : `，心情平平，没有获得快乐。`;
+      text = `🌿 探索：${sceneText} 获得经验 ${xpGain} 点${happyMsg}`;
+    }
+    state.gold += 1;
+    text += ` 捡到了 💰1 金币。${xpCostText(xpCost)}${energyTag()}。`;
+    if (leveledUp) text += ` 🎉 升级！`;
+    checkAchievements();
+    message(text);
+    onWishAction("explore");
+  }
+
+  function rest() {
+    if (isDead || isAskingAmulet || isLazyWarning || !checkActionCooldown()) return;
+    if (checkSpam()) return;
+
+    state.stats.rest++;
+    const today = new Date().toDateString();
+    if (state.dreamDate !== today) { state.dreamDate = today; state.dreamToday = 0; }
+    
+    let shardText = "";
+    if (state.dreamToday < 3) {
+      state.dreamToday++; state.dreamShards++; state.dreamTotal++; state.stats.dreamShard++;
+      shardText = " 获得 🌙 梦境碎片 ×1";
+    }
+    
+    const xpCost = payActionCost();   // 休息维持每次必扣（与 v2.0.7 一致，本版不改数值）
+    state.hunger = Math.max(0, state.hunger - 3);
+    state.energy = Math.min(100, state.energy + 40);
+    const bonus = Math.round(gainHappy(1, 2) * getHappyMultiplier());
+    
+    checkAchievements();
+    sfx("act");
+    message(`🌙 休息：饱腹度 -3，快乐值 +${bonus}，精力 +40。${xpCostText(xpCost)}${shardText}${energyTag()}。`);
+    onWishAction("rest");
+  }
+
+  // ================= 其他弹窗逻辑 =================
+  // ================= 签到系统 =================
+  const signInRewards = [
+    { type: "gold", amount: 15, emoji: "💰" },
+    { type: "knowledge", amount: 11, emoji: "📖" },
+    { type: "gold", amount: 25, emoji: "💰" },
+    { type: "knowledge", amount: 22, emoji: "📖" },
+    { type: "gold", amount: 35, emoji: "💰" },
+    { type: "knowledge", amount: 33, emoji: "📖" },
+    { type: "gold", amount: 45, emoji: "💰" }
+  ];
+
+  function openSignIn() {
+    if (isDead || isAskingAmulet) return;
+    renderSignInUI();
+    document.getElementById("signInOverlay").classList.add("show");
+  }
+
+  function closeSignIn() { document.getElementById("signInOverlay").classList.remove("show"); }
+
+  function renderSignInUI() {
+    const today = new Date().toDateString();
+    const isSignedToday = (state.lastSignInDate === today);
+    const streak = state.signInStreak || 0;
+    const grid = document.getElementById("signInGrid");
+    grid.innerHTML = "";
+
+    for (let i = 0; i < 7; i++) {
+      const reward = signInRewards[i];
+      const isClaimed = i < streak;
+      const isToday = i === streak && !isSignedToday;
+      
+      const div = document.createElement("div");
+      div.style = `padding: 10px 5px; border-radius: 10px; border: 2px solid ${isToday ? '#ff9800' : '#e0e0e0'}; background: ${isClaimed ? '#f5f5f5' : (isToday ? '#fff8e1' : '#ffffff')}; opacity: ${isClaimed ? 0.5 : 1}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;`;
+      
+      div.innerHTML = `
+        <div style="font-size: 12px; color: #78909c;">第${i+1}天</div>
+        <div style="font-size: 24px;">${reward.emoji}</div>
+        <div style="font-size: 13px; font-weight: bold; color: ${reward.type === 'gold' ? '#f57c00' : '#1976d2'};">${reward.amount}</div>
+        ${isClaimed ? '<div style="font-size:10px; color:#4caf50;">✓已领</div>' : ''}
+      `;
+      grid.appendChild(div);
+    }
+
+    const btn = document.getElementById("claimSignInBtn");
+    if (isSignedToday) {
+      btn.disabled = true;
+      btn.textContent = "今日已签到";
+      btn.style.background = "#cfd8dc";
+      btn.style.color = "#90a4ae";
+    } else {
+      btn.disabled = false;
+      btn.textContent = "领取今日奖励";
+      btn.style.background = "#4caf50";
+      btn.style.color = "white";
+    }
+  }
+
+  function claimSignIn() {
+    if (isDead || isAskingAmulet || !checkActionCooldown()) return;
+    const today = new Date().toDateString();
+    if (state.lastSignInDate === today) { alert("今天已经签到过啦！"); return; }
+
+    // 判断断签逻辑
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toDateString();
+
+    if (state.lastSignInDate === yesterdayStr) {
+      if (state.signInStreak >= 7) {
+        state.signInStreak = 1; // 7天满了，开启新一轮
+      } else {
+        state.signInStreak++;
+      }
+    } else {
+      state.signInStreak = 1; // 断签，重新开始
+    }
+
+    state.lastSignInDate = today;
+    const reward = signInRewards[state.signInStreak - 1];
+
+    if (reward.type === "gold") {
+      state.gold += reward.amount;
+      sfx("coin");
+      alert(`📅 签到成功！获得 💰${reward.amount} 金币！`);
+    } else if (reward.type === "knowledge") {
+      state.knowledge += reward.amount;
+      sfx("good");
+      alert(`📅 签到成功！获得 📖${reward.amount} 点学识！`);
+    }
+
+    renderSignInUI();
+    render();
+  }
+  function openGift() {
+    if (isDead || isAskingAmulet) return;
+    if (!state.giftUnlocked) return;
+    document.getElementById("giftOverlay").classList.add("show");
+  }
+  function closeGift() { document.getElementById("giftOverlay").classList.remove("show"); }
+  function buyGift() {
+    if (isDead || isAskingAmulet || !checkActionCooldown()) return;
+    if (state.gold < 520) { alert("金币不足！"); return; }
+    if (state.intimacy >= 100) { alert("亲密度已满 100 点，送礼无效。"); return; }
+    state.gold -= 520;
+    const gain = Math.min(18, 100 - state.intimacy);
+    state.intimacy = Math.min(100, state.intimacy + gain);
+    sfx("good");
+    closeGift();
+    message(`🎁 团团收到了你的礼物，开心得转圈圈！亲密度 +${gain}（当前 ${state.intimacy}/100）。`);
+    onWishAction("gift");
+    render();
+  }
+
+  function openDream() {
+    if (isDead || isAskingAmulet) return;
+    document.getElementById("dreamShardsCount").textContent = state.dreamShards;
+    const prophecyCosts = [3, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51, 54, 57, 60];
+    const currentCost = prophecyCosts[Math.min(state.prophecyCount, prophecyCosts.length - 1)];
+    const btn = document.getElementById("dreamProphecyBtn");
+    if (state.prophecy) {
+      btn.textContent = "🔮 预言生效中"; btn.disabled = true;
+    } else {
+      btn.textContent = `🔮 消耗 ${currentCost} 个碎片预言`;
+      btn.disabled = state.dreamShards < currentCost;
+    }
+    document.getElementById("dreamOverlay").classList.add("show");
+  }
+  function closeDream() { document.getElementById("dreamOverlay").classList.remove("show"); }
+  function buyProphecy() {
+    if (isDead || isAskingAmulet || !checkActionCooldown()) return;
+    const prophecyCosts = [3, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51, 54, 57, 60];
+    const currentCost = prophecyCosts[Math.min(state.prophecyCount, prophecyCosts.length - 1)];
+    if (state.dreamShards < currentCost) return;
+    state.dreamShards -= currentCost;
+    state.prophecy = true;
+    state.prophecyCount++;
+    message("🔮 预言已生效：下一次濒死时，团团会被梦境之力救回。");
+    closeDream();
+    render();
+  }
+
+  function openShop() {
+    if (isDead || isAskingAmulet) return;
+    document.getElementById('shopGoldText').textContent = state.gold;
+    document.getElementById('shopOverlay').classList.add("show");
+  }
+  function closeShop() { document.getElementById('shopOverlay').classList.remove("show"); }
+  function buyItem(type, cost) {
+    if (isDead || isAskingAmulet || !checkActionCooldown()) return;
+    if (state.gold < cost) { alert("金币不足！"); return; }
+    state.gold -= cost;
+    if (type === 'apple') state.hunger = Math.min(100, state.hunger + 30);
+    else if (type === 'toy') state.happy = Math.min(100, state.happy + 30);
+    else if (type === 'pill') gainXP(50);
+    else if (type === 'amulet') state.inventory.amulet++;
+    else if (type === 'gacha') {
+      const roll = Math.random() * 100;
+      if (roll < 60) { if(Math.random()<0.5) state.gold+=66; else state.hunger=Math.max(0,state.hunger-20); }
+      else if (roll < 94.9) { if(Math.random()<0.5) state.gold+=520; else gainXP(100); }
+      else if (roll < 99.9) { if(Math.random()<0.5) state.inventory.amulet++; else { state.hunger=100; state.happy=100; } }
+      else { if(Math.random()<0.5) state.gold+=888; else { state.xp=0; state.level++; updatePetByLevel(); state.stats.levelUp++; if (state.level > state.stats.maxLevel) state.stats.maxLevel = state.level; } }
+      alert("🎁 盲盒开启！");
+    }
+    document.getElementById('shopGoldText').textContent = state.gold;
+    render();
+  }
+
+  function openPanel() { if (isDead || isAskingAmulet) return; renderPanel(); document.getElementById("overlay").classList.add("show"); }
+  function closePanel() { document.getElementById("overlay").classList.remove("show"); }
+  function switchTab(name, btn) {
+    document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
+    document.querySelectorAll(".tabs button").forEach(el => el.classList.remove("active"));
+    document.getElementById("tab-" + name).classList.add("active");
+    btn.classList.add("active");
+  }
+
+  function petTap() {
+    if (isDead || isAskingAmulet) return;
+    const now = Date.now();
+    if (now - lastPetTapTime < 500) return;
+    lastPetTapTime = now;
+    state.stats.petTap++;
+
+    // 每日摸头亲密额度（跨天自动重置）
+    const today = new Date().toDateString();
+    if (state.petDate !== today) { state.petDate = today; state.petTodayIntimacy = 0; }
+
+    const c = document.getElementById("creature");
+    c.classList.remove("bounce"); void c.offsetWidth; c.classList.add("bounce");
+    sfx("tap");
+
+    // 「想被摸摸头」按行为计数，不受额度与精力限制
+    onWishAction("pet");
+
+    if (state.energy < 2) {
+      message(`🫳 团团累得眼皮打架了，先让它休息一下吧～（摸头需 ⚡2，当前 ⚡${state.energy}/100）`);
+      return;
+    }
+    state.energy -= 2;
+    state.happy = Math.min(100, state.happy + 1);
+
+    let gain = 0;
+    const left = PET_DAILY_INTIMACY_CAP - state.petTodayIntimacy;
+    if (left > 0 && state.intimacy < 100) {
+      gain = Math.min(1, left, 100 - state.intimacy);
+      state.intimacy += gain;
+      state.petTodayIntimacy += gain;
+    }
+
+    if (gain > 0) {
+      message(`🫳 团团蹭了蹭你的手心～ 快乐 +1，精力 -2，亲密度 +${gain}（今日摸头还剩 ${PET_DAILY_INTIMACY_CAP - state.petTodayIntimacy} 点额度）。${energyTag()}。`);
+    } else {
+      message(`🫳 团团开心地蹭了蹭你～ 快乐 +1，精力 -2。今天已经腻在一起够久啦，换个方式陪陪它吧（喂食 / 玩耍 / 心愿）。${energyTag()}。`);
+    }
+  }
+
+  function updateMenuPet() { document.getElementById('menuCreature').textContent = state.pet; }
+
+  // ===== 三个界面互斥切换：主界面 / 游戏界面 / 学习系统界面 =====
+  const SCREEN_IDS = { menu: "mainMenu", game: "gameUI", learn: "learnScreen" };
+  function showScreen(name) {
+    for (const [key, id] of Object.entries(SCREEN_IDS)) {
+      const el = document.getElementById(id);
+      if (el) el.style.display = (key === name) ? (key === "menu" ? "flex" : "block") : "none";
+    }
+  }
+
+  // 所有全屏浮层：打开期间一律暂停衰减与死亡判定
+  const FLOATING_OVERLAYS = ["overlay", "shopOverlay", "workOverlay", "dreamOverlay", "giftOverlay", "signInOverlay", "wishOverlay", "deathOverlay", "amuletOverlay", "lazyOverlay"];
+  function anyOverlayOpen() {
+    return FLOATING_OVERLAYS.some(id => {
+      const el = document.getElementById(id);
+      return el && el.classList.contains("show");
+    });
+  }
+  function closeAllOverlays() {
+    FLOATING_OVERLAYS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove("show");
+    });
+    if (learnCooldownTimer) { clearInterval(learnCooldownTimer); learnCooldownTimer = null; }
+    if (workCooldownTimer) { clearInterval(workCooldownTimer); workCooldownTimer = null; }
+  }
+  function showLearnView(name) {
+    const map = { main: "learnMainView", stream: "learnStreamView", major: "learnMajorView" };
+    for (const [k, id] of Object.entries(map)) {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle("active", k === name);
+    }
+  }
+
+  function startGame() { showScreen("game"); render(); }
+  function goHome() {
+    closeAllOverlays();
+    showScreen("menu");
+    updateMenuPet();
+  }
+
+  function resetGameMenu() {
+    if (confirm("确定要清空当前存档（包括学历和金币）重新开始吗？")) {
+      state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      updatePetByLevel(); save(true); updateMenuPet();
+      isDead = false; isAskingAmulet = false;
+      document.getElementById("deathOverlay").classList.remove("show");
+      document.getElementById("amuletOverlay").classList.remove("show");
+      if (document.getElementById('gameUI').style.display === 'block') { render(); }
+    }
+  }
+
+  function checkAchievements() {
+    for (const def of achievementsDef) {
+      if (!state.achievements[def.id] && def.check(state)) {
+        state.achievements[def.id] = { unlocked: true, claimed: false };
+        showAchievementPopup(def.name);
+      }
+    }
+  }
+
+  function showAchievementPopup(name) {
+    const container = document.getElementById("achPopups");
+    const popup = document.createElement("div");
+    popup.className = "ach-popup";
+    popup.innerHTML = `<div class="p-title">🏆 成就解锁</div><div class="p-name">${name}</div><div class="p-hint">点击关闭</div>`;
+    popup.onclick = () => { popup.classList.add("fade-out"); setTimeout(() => popup.remove(), 500); };
+    container.appendChild(popup);
+    setTimeout(() => { if (popup.parentNode) { popup.classList.add("fade-out"); setTimeout(() => popup.remove(), 500); } }, 2000); 
+  }
+
+  function showDexPopup(name, emoji) {
+    const container = document.getElementById("dexPopups");
+    const popup = document.createElement("div");
+    popup.className = "dex-popup";
+    const isLegendary = name.includes("绝世稀有");
+    if (isLegendary) {
+      popup.style.background = "linear-gradient(135deg, #fff8e1, #ffe082)";
+      popup.style.borderLeft = "5px solid #ffb300";
+      popup.innerHTML = `<div class="p-title" style="color:#d84315;">🌟 传说降临 🌟</div><div class="p-name" style="color:#bf360c; font-size:18px;">${emoji} ${name}</div>`;
+    } else {
+      popup.innerHTML = `<div class="p-title">📖 发现新图鉴</div><div class="p-name">${emoji} ${name}</div>`;
+    }
+    popup.onclick = () => { popup.classList.add("fade-out"); setTimeout(() => popup.remove(), 500); };
+    container.appendChild(popup);
+    setTimeout(() => { if (popup.parentNode) { popup.classList.add("fade-out"); setTimeout(() => popup.remove(), 500); } }, isLegendary ? 10000 : 3000); 
+  }
+
+  function claimAchievement(id) {
+    const entry = state.achievements[id];
+    if (!entry || !entry.unlocked || entry.claimed) return;
+    const def = achievementsDef.find(a => a.id === id);
+    entry.claimed = true;
+    if (def.reward.xp) gainXP(def.reward.xp);
+    if (def.reward.happy) state.happy = Math.min(100, state.happy + def.reward.happy);
+    render(); renderPanel();
+  }
+
+  function triggerDeath(msg, isCheat = false) {
+    if (isDead) return;
+    isDead = true; isCheating = isCheat;
+    document.getElementById("deathMsg").textContent = msg;
+    document.getElementById("deathOverlay").classList.add("show");
+  }
+
+  function checkDeath() {
+    // 主界面 / 学习界面 / 任意浮层打开期间，暂停死亡判定
+    if (!isGameActive()) return;
+    if (state.level < 2 || isDead || isAskingAmulet || isLazyWarning) return;
+    if (state.happy <= 0 || state.hunger <= 0) {
+      if (state.prophecy) {
+        state.prophecy = false;
+        state.hunger = Math.max(state.hunger, 60);
+        state.happy = Math.max(state.happy, 60);
+        state.log = "🔮 梦境预言生效！团团被一股温柔的力量拉了回来（饱腹 / 快乐恢复至 60）。";
+        sfx("good");
+        setTimeout(render, 0);
+        return;
+      }
+      if (state.inventory.amulet > 0) {
+        isAskingAmulet = true;
+        document.getElementById("amuletOverlay").classList.add("show");
+      } else {
+        triggerDeath(state.happy <= 0 ? "团团抑郁自杀了" : "主人，团团饿死了");
+      }
+    }
+  }
+
+  function useAmulet() {
+    state.inventory.amulet--; state.hunger = 50; state.happy = 50;
+    isAskingAmulet = false;
+    document.getElementById("amuletOverlay").classList.remove("show");
+    render();
+  }
+
+  function rejectAmulet() {
+    isAskingAmulet = false;
+    document.getElementById("amuletOverlay").classList.remove("show");
+    triggerDeath(state.happy <= 0 ? "团团抑郁自杀了" : "主人，团团饿死了");
+  }
+
+  function confirmDeath() {
+    if (isCheating) { localStorage.removeItem("wonderfulCreatureSave"); }
+    else {
+      const savedGold = state.gold;
+      const savedAmulet = state.inventory.amulet;
+      state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      state.gold = savedGold;
+      state.inventory.amulet = savedAmulet;
+      save(true);
+    }
+    location.reload();
+  }
+
+  function render() {
+    state.hunger = Math.max(0, Math.min(100, state.hunger));
+    state.happy = Math.max(0, Math.min(100, state.happy));
+
+    const need = xpNeeded(state.level);
+    document.getElementById("creature").textContent = state.pet;
+    document.getElementById("level").textContent = state.level;
+    document.getElementById("degreeText").textContent = state.degree;
+    document.getElementById("xpText").textContent = state.xp;
+    document.getElementById("xpNeed").textContent = need;
+    document.getElementById("xpBar").style.width = Math.min(100, state.xp / need * 100) + "%";
+    document.getElementById("hungerText").textContent = state.hunger;
+    document.getElementById("happyText").textContent = state.happy;
+    document.getElementById("hungerBar").style.width = state.hunger + "%";
+    document.getElementById("happyBar").style.width = state.happy + "%";
+    document.getElementById("intimacyText").textContent = Math.round(state.intimacy);
+    document.getElementById("intimacyBar").style.width = state.intimacy + "%";
+    renderEnergy();
+    
+    document.getElementById("log").textContent = state.log;
+
+    // 签到红点（入口已移到主界面）
+    const todayStr = new Date().toDateString();
+    const menuDot = document.getElementById("menuSignInDot");
+    if (menuDot) menuDot.style.display = state.lastSignInDate !== todayStr ? "block" : "none";
+
+    document.getElementById("mood").textContent =
+      state.hunger <= 5 ? "心情：饿得发抖 😰" :
+      state.happy <= 3 ? "心情：非常难过 💔" :
+      state.hunger < 20 ? "心情：肚子饿了 🥺" :
+      state.happy < 30 ? "心情：有点失落 🌧️" :
+      state.energy <= 5 ? "心情：累得趴下了 😮‍💨" :
+      state.energy <= 20 ? "心情：有点犯困 😪" :
+      state.happy > 80 ? "心情：超级开心 ✨" :
+      state.intimacy >= 80 ? "心情：黏着你撒娇 💞" :
+      "心情：期待冒险 ✨";
+
+    // 按钮解锁控制
+    if (!state.giftUnlocked && state.gold >= 520) state.giftUnlocked = true;
+    const giftBtn = document.getElementById("giftBtn");
+    if (giftBtn) giftBtn.style.display = state.giftUnlocked ? "" : "none";
+    const learnBtn = document.getElementById("learnBtn");
+    if (learnBtn) learnBtn.style.display = isLearnUnlocked() ? "" : "none";
+
+    save();
+    updateMenuPet();
+    checkAchievements();
+    updateWishUI();
+    checkDeath(); 
+  }
+
+  function renderPanel() {
+    const list = document.getElementById("achList");
+    list.innerHTML = "";
+    for (const def of achievementsDef) {
+      const entry = state.achievements[def.id];
+      const unlocked = entry && entry.unlocked;
+      const claimed = entry && entry.claimed;
+      const div = document.createElement("div");
+      div.className = "ach" + (unlocked ? " done" : "") + (claimed ? " claimed" : "");
+      const info = document.createElement("div"); info.className = "info";
+      info.innerHTML = `<div class="name">${def.name}</div><div class="cond">${def.cond}</div>`;
+      const btn = document.createElement("button");
+      if (claimed) { btn.textContent = "已领取"; btn.disabled = true; }
+      else if (unlocked) { btn.textContent = "领取"; btn.onclick = () => claimAchievement(def.id); }
+      else { btn.textContent = "未解锁"; btn.disabled = true; }
+      div.appendChild(info); div.appendChild(btn); list.appendChild(div);
+    }
+
+    const dexGrid = document.getElementById("dexGrid");
+    dexGrid.innerHTML = "";
+    const allEvents = [...eventsDef, ...studyDexDef];
+    for (const ev of allEvents) {
+      const rec = state.dex[ev.id];
+      const found = !!rec;
+      const div = document.createElement("div");
+      div.className = "dex-item" + (found ? "" : " locked");
+      if (found && ev.id === "gem") div.className += " legendary";
+      div.innerHTML = `
+        <div class="emoji">${found ? ev.emoji : "❓"}</div>
+        <div class="dex-info">
+          <div class="dex-name">${found ? ev.name : "未发现"}</div>
+          <div class="dex-meta">${found ? `已发现 ${rec.count} 次` : "尚未发现"}</div>
+        </div>
+      `;
+      dexGrid.appendChild(div);
+    }
+    document.getElementById("dexProgress").textContent = `已收集 ${dexDiscoveredCount()} / ${allEvents.length}` + (state.dexMaster ? "（已集齐）" : "");
+
+    const s = state.stats;
+    const statsData = [
+      ["喂食次数", s.feed], ["玩耍次数", s.play], ["探索次数", s.explore],
+      ["探索成功", s.exploreSuccess], ["探索失败", s.exploreFail], ["休息次数", s.rest],
+      ["玩耍受伤", s.hurt], ["打工次数", s.work], ["最高等级", s.maxLevel], ["降级次数", s.levelDown],
+      ["摸头次数", s.petTap], ["累计学习次数", s.study || 0], ["梦境碎片(累计)", s.dreamShard], ["当前学历", state.degree], ["当前专业", state.major || "无"], ["心愿完成", s.wishDone || 0], ["心愿爽约", s.wishFail || 0]
+    ];
+    const grid = document.getElementById("statsGrid");
+    grid.innerHTML = "";
+    for (const [label, value] of statsData) {
+      const div = document.createElement("div");
+      div.textContent = `${label}：${value}`;
+      grid.appendChild(div);
+    }
+  }
+
+  function isGameActive() {
+    if (document.hidden) return false;
+    if (document.getElementById('gameUI').style.display !== 'block') return false;
+    return !anyOverlayOpen();
+  }
+
+  setInterval(() => {
+    if (document.hidden || isDead || isAskingAmulet) return;
+    if (!isGameActive()) return;
+    if (state.happy > 0) {
+      const loss = state.happy > 80 ? 2 : 1;
+      state.happy = Math.max(0, state.happy - loss);
+      render();
+    }
+  }, 6000);
+
+  setInterval(() => {
+    if (document.hidden || isDead || isAskingAmulet) return;
+    if (!isGameActive()) return;
+    if (state.hunger > 0) {
+      state.hunger = Math.max(0, state.hunger - 1);
+      render();
+    }
+  }, 30000);
+
+  setInterval(() => {
+    if (document.hidden || isDead || isAskingAmulet) return;
+    if (!isGameActive()) return;
+    if (state.hunger > 5) return;
+    const amount = weightedEdgeRandom(0, 8);
+    if (amount > 0) {
+      const result = loseXP(amount);
+      if (result.lost > 0) { state.log = `⚠️ 团团太饿了！经验有所减少。`; render(); }
+    }
+  }, 5000);
+
+  setInterval(() => {
+    if (document.hidden || isDead || isAskingAmulet) return;
+    if (!isGameActive()) return;
+    if (state.happy > 3) return;
+    const amount = weightedEdgeRandom(0, 15);
+    if (amount > 0) {
+      const result = loseXP(amount);
+      if (result.lost > 0) { state.log = `⚠️ 团团非常难过！经验有所减少。`; render(); }
+    }
+  }, 8000);
+
+  setInterval(() => {
+    if (document.hidden || isDead || isAskingAmulet) return;
+    if (!isGameActive()) return;
+    if (state.hunger > 5 || state.happy > 3) return;
+    const result = loseXP(2);
+    if (result.lost > 0) { state.log = `💀 团团又饿又难过！经验有所减少。`; render(); }
+  }, 1000);
+
+  // ===== 心愿倒计时：只在游戏界面活跃时流逝，打开任意面板自动暂停 =====
+  setInterval(() => {
+    if (state.wish.status !== "active") { updateWishUI(); return; }
+    if (document.hidden || isDead || isAskingAmulet || !isGameActive()) { updateWishUI(); return; }
+    state.wish.remainMs -= 1000;
+    if (state.wish.remainMs <= 0) { failWish(); return; }
+    if (Math.ceil(state.wish.remainMs / 1000) % 10 === 0) save(); // 每 10 秒轻量存档
+    updateWishUI();
+  }, 1000);
+
+  // ===== 亲密度自然衰减：久不陪伴会慢慢变淡（互动后 5 分钟宽限） =====
+  setInterval(() => {
+    if (document.hidden || isDead || isAskingAmulet) return;
+    if (!isGameActive()) return;
+    if (Date.now() - lastIntimacyGainAt < INTIMACY_DECAY_GRACE) return;
+    if (state.intimacy <= 0) return;
+    state.intimacy = Math.max(0, state.intimacy - 1);
+    state.log = `💞 好久没陪团团啦，它有点生疏了……亲密度 -1（喂食、玩耍、摸头、送礼、完成心愿都能补回来）。`;
+    render();
+  }, INTIMACY_DECAY_INTERVAL);
+
+  updatePetByLevel();
+  updateMenuPet();
+  checkAchievements();
+  render();
+
+  // ================= 点击背景遮罩关闭弹窗 =================
+  function enableOverlayClickToClose() {
+    const closeMap = {
+      "shopOverlay": closeShop,
+      "workOverlay": closeWork,
+      "dreamOverlay": closeDream,
+      "giftOverlay": closeGift,
+      "overlay": closePanel,
+      "signInOverlay": closeSignIn,
+      "wishOverlay": closeWish
+    };
+
+    for (const [id, closeFunc] of Object.entries(closeMap)) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener("click", function(e) {
+          if (e.target === this) {
+            closeFunc();
+          }
+        });
+      }
+    }
+  }
+  enableOverlayClickToClose();
+
+</script>
+</body>
+</html>
